@@ -78,3 +78,37 @@ export function mockPanicResponse(coords) {
     coords,
   });
 }
+
+let mockContacts = [
+  { id: 1, name: "Campus Security", phone: "+15555551234" },
+  { id: 2, name: "Roommate", phone: "+15555557654" },
+];
+
+export function mockFetchProfile() {
+  return Promise.resolve({
+    email: "demo@safesroute.app",
+    default_phone: "+15555551234",
+    last_alert_at: "2025-11-14T22:10:00Z",
+  });
+}
+
+export function mockFetchContacts() {
+  return Promise.resolve([...mockContacts]);
+}
+
+export function mockCreateContact(payload) {
+  const id = Date.now();
+  const contact = { id, ...payload };
+  mockContacts = [...mockContacts, contact];
+  return Promise.resolve(contact);
+}
+
+export function mockUpdateContact(id, payload) {
+  mockContacts = mockContacts.map((c) => (c.id === id ? { ...c, ...payload } : c));
+  return Promise.resolve(mockContacts.find((c) => c.id === id));
+}
+
+export function mockDeleteContact(id) {
+  mockContacts = mockContacts.filter((c) => c.id !== id);
+  return Promise.resolve({ success: true });
+}

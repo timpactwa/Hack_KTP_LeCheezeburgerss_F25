@@ -5,6 +5,11 @@ import {
   mockFetchCrimeHeatmap,
   mockFetchSafeRoute,
   mockPanicResponse,
+  mockFetchProfile,
+  mockFetchContacts,
+  mockCreateContact,
+  mockUpdateContact,
+  mockDeleteContact,
 } from "../mocks/mockData";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000";
@@ -71,6 +76,54 @@ export async function sendPanicAlert(payload) {
     return mockPanicResponse(payload);
   }
   const { data } = await client.post("/panic-alert", payload);
+  return data;
+}
+
+export async function fetchProfile() {
+  if (USE_MOCK_API) {
+    return mockFetchProfile();
+  }
+  const { data } = await client.get("/profile");
+  return data;
+}
+
+export async function updateProfile(payload) {
+  if (USE_MOCK_API) {
+    return Promise.resolve({ ...payload });
+  }
+  const { data } = await client.put("/profile", payload);
+  return data;
+}
+
+export async function fetchTrustedContacts() {
+  if (USE_MOCK_API) {
+    return mockFetchContacts();
+  }
+  const { data } = await client.get("/contacts");
+  return data;
+}
+
+export async function createTrustedContact(payload) {
+  if (USE_MOCK_API) {
+    return mockCreateContact(payload);
+  }
+  const { data } = await client.post("/contacts", payload);
+  return data;
+}
+
+export async function updateTrustedContact(id, payload) {
+  if (USE_MOCK_API) {
+    return mockUpdateContact(id, payload);
+  }
+  const { data } = await client.put(`/contacts/${id}`, payload);
+  return data;
+}
+
+export async function deleteTrustedContact(id) {
+  if (USE_MOCK_API) {
+    return mockDeleteContact(id);
+  }
+  const { data } = await client.delete(`/contacts/${id}`);
   return data;
 }
 
