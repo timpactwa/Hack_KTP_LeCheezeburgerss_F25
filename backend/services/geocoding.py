@@ -88,8 +88,8 @@ class MapboxGeocodingClient:
     def __post_init__(self) -> None:
         """Initialize API key and cache."""
         if not self.api_key:
-            # Try MAPBOX_ACCESS_TOKEN first, then fallback to MAPBOX_TOKEN
-            self.api_key = os.getenv("MAPBOX_ACCESS_TOKEN") or os.getenv("MAPBOX_TOKEN")
+            from .. import config
+            self.api_key = config.config.MAPBOX_ACCESS_TOKEN
         
         if not self.cache:
             # Use file-based cache in project root

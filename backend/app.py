@@ -2,33 +2,15 @@
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
+import logging
 
-from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
-# Load environment variables from .env file
-# Check in order: project root, backend directory, scripts directory
-project_root = Path(__file__).parent.parent
-env_locations = [
-    project_root / ".env",           # Project root (preferred)
-    Path(__file__).parent / ".env",  # Backend directory
-    project_root / "scripts" / ".env",  # Scripts directory (fallback)
-]
+from . import config
 
-env_path = None
-for location in env_locations:
-    if location.exists():
-        env_path = location
-        load_dotenv(location)
-        break
-
-if not env_path:
-    # Final fallback: try loading from current directory
-    load_dotenv()
+LOGGER = logging.getLogger(__name__)
 
 
 def create_app() -> Flask:
@@ -36,13 +18,24 @@ def create_app() -> Flask:
 
     app = Flask(__name__)
     app.config.setdefault("API_NAME", "SafeRoute NYC")
-    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", app.config["SECRET_KEY"])
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 60 * 60 * 12))
+    app.config["SECRET_KEY"] = config.config.SECRET_KEY
+    app.config["JWT_SECRET_KEY"] = config.config.JWT_SECRET_KEY
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = config.config.JWT_ACCESS_TOKEN_EXPIRES
     CORS(app)
+    
+    # Validate configuration on startup
+    validation = config.config.validate_required()
+    if validation["missing"]:
+        LOGGER.warning("Missing required configuration:")
+        for item in validation["missing"]:
+            LOGGER.warning(f"  - {item}")
+        LOGGER.warning("Some features may not work correctly.")
+    if validation["warnings"]:
+        for warning in validation["warnings"]:
+            LOGGER.warning(warning)
 
     from . import database
-    from .routes import auth, geocoding, health, panic, routes
+    from .routes import auth, geocoding, health, panic, routes, settings
 
     database.init_db()
     JWTManager(app)
@@ -52,6 +45,7 @@ def create_app() -> Flask:
     app.register_blueprint(routes.bp)
     app.register_blueprint(panic.bp)
     app.register_blueprint(geocoding.bp)
+    app.register_blueprint(settings.bp)
 
     @app.get("/")
     def index():  # pragma: no cover - trivial helper

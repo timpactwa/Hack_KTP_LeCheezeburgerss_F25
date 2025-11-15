@@ -74,6 +74,27 @@ export async function sendPanicAlert(payload) {
   return data;
 }
 
+// Settings API functions
+export async function getTrustedContacts() {
+  const { data } = await client.get("/settings/contacts");
+  return data;
+}
+
+export async function createTrustedContact(payload) {
+  const { data } = await client.post("/settings/contacts", payload);
+  return data;
+}
+
+export async function deleteTrustedContact(contactId) {
+  const { data } = await client.delete(`/settings/contacts/${contactId}`);
+  return data;
+}
+
+export async function updateUserProfile(payload) {
+  const { data } = await client.put("/settings/profile", payload);
+  return data;
+}
+
 export function getApiClient() {
   return client;
 }

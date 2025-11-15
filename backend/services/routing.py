@@ -27,7 +27,8 @@ class OpenRouteServiceClient:
 
     def __post_init__(self) -> None:
         if not self.api_key:
-            self.api_key = os.getenv("ORS_API_KEY")
+            from .. import config
+            self.api_key = config.config.ORS_API_KEY
 
     def build_route(
         self,

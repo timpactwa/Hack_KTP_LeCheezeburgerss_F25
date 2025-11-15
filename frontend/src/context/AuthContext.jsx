@@ -41,6 +41,10 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("sr_user");
   }, []);
 
+  const updateUser = useCallback((updatedUser) => {
+    setUser(updatedUser);
+  }, []);
+
   useEffect(() => {
     if (token) {
       localStorage.setItem("sr_token", token);
@@ -64,10 +68,11 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      updateUser,
       isSubmitting,
       isAuthenticated: Boolean(user),
     }),
-    [user, token, login, register, logout, isSubmitting]
+    [user, token, login, register, logout, updateUser, isSubmitting]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

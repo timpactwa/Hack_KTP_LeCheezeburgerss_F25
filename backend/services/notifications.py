@@ -20,9 +20,10 @@ def send_panic_alert(phone_numbers: list[str], lat: float | None, lng: float | N
     if not phone_numbers:
         return {"status": "no_contacts"}
 
-    sid = os.getenv("TWILIO_SID")
-    token = os.getenv("TWILIO_AUTH_TOKEN")
-    from_number = os.getenv("TWILIO_FROM_NUMBER")
+    from .. import config
+    sid = config.config.TWILIO_SID
+    token = config.config.TWILIO_AUTH_TOKEN
+    from_number = config.config.TWILIO_FROM_NUMBER
     map_link = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}" if lat and lng else "Location unavailable"
     body = f"SafeRoute alert at {datetime.utcnow().isoformat()} UTC. View: {map_link}"
 
