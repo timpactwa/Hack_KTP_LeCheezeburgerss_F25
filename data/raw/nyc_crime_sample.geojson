@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [-73.9963, 40.7202]},
+      "properties": {"weight": 0.85, "category": "robbery", "hour": 23}
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [-73.9895, 40.7175]},
+      "properties": {"weight": 0.65, "category": "assault", "hour": 1}
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [-74.003, 40.7255]},
+      "properties": {"weight": 0.9, "category": "burglary", "hour": 2}
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [-73.991, 40.708]},
+      "properties": {"weight": 0.7, "category": "robbery", "hour": 0}
+    }
+  ]
+}

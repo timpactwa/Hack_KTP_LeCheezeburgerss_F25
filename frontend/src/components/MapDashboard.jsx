@@ -5,6 +5,7 @@ import {
   ensureGeoJSONSource,
   ensureHeatmapLayer,
   ensureLineLayer,
+  ensurePolygonLayer,
   mapboxgl,
 } from "../services/mapbox";
 import { useDashboard } from "./dashboard-context";
@@ -76,6 +77,14 @@ function MapDashboard() {
           color: activeRouteKey === "safest" ? "#34d399" : "#065f46",
           width: activeRouteKey === "safest" ? 6 : 3,
           dasharray: [1, 0],
+        });
+      }
+
+      if (routeData?.risk_polygons) {
+        ensureGeoJSONSource(map, "risk-polygons", routeData.risk_polygons);
+        ensurePolygonLayer(map, {
+          id: "risk-polygons-fill",
+          sourceId: "risk-polygons",
         });
       }
 

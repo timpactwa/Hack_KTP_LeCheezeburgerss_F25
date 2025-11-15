@@ -76,4 +76,22 @@ export function ensureHeatmapLayer(map, sourceId) {
   });
 }
 
+export function ensurePolygonLayer(map, options) {
+  const { id, sourceId, color = "#f87171", opacity = 0.2 } = options;
+  if (map.getLayer(id)) {
+    map.setPaintProperty(id, "fill-color", color);
+    map.setPaintProperty(id, "fill-opacity", opacity);
+    return;
+  }
+  map.addLayer({
+    id,
+    type: "fill",
+    source: sourceId,
+    paint: {
+      "fill-color": color,
+      "fill-opacity": opacity,
+    },
+  });
+}
+
 export { mapboxgl };

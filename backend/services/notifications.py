@@ -1,5 +1,36 @@
-"""Notification adapter that keeps SMS provider logic isolated.
+"""Notification adapter that keeps SMS provider logic isolated."""
 
-Functions here will be invoked by ``backend.routes.panic`` (and possibly other
-alerting workflows) to send Twilio texts containing Mapbox/Google Maps links to
-the trusted contacts stored in ``backend.models``."""
+from __future__ import annotations
+
+import logging
+import os
+from datetime import datetime
+
+try:
+    from twilio.rest import Client
+except ImportError:  # pragma: no cover - optional dependency
+    Client = None  # type: ignore
+
+LOGGER = logging.getLogger(__name__)
+
+
+def send_panic_alert(phone_numbers: list[str], lat: float | None, lng: float | None) -> dict:
+    """Send a panic SMS to every phone number, falling back to logging."""
+
+    if not phone_numbers:
+        return {"status": "no_contacts"}
+
+    sid = os.getenv("TWILIO_SID")
+    token = os.getenv("TWILIO_AUTH_TOKEN")
+    from_number = os.getenv("TWILIO_FROM_NUMBER")
+    map_link = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}" if lat and lng else "Location unavailable"
+    body = f"SafeRoute alert at {datetime.utcnow().isoformat()} UTC. View: {map_link}"
+
+    if not (sid and token and from_number and Client):
+        LOGGER.info("Simulated SMS to %s: %s", phone_numbers, body)
+        return {"status": "simulated", "message": body}
+
+    client = Client(sid, token)
+    for recipient in phone_numbers:
+        client.messages.create(to=recipient, from_=from_number, body=body)
+    return {"status": "sent", "count": len(phone_numbers)}

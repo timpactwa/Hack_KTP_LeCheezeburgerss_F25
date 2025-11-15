@@ -4,23 +4,47 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 
-from ..services import mock_data
+from ..services.crime_data import crime_data_service
+from ..services.routing import OpenRouteServiceClient, RoutingError, summarize_route
 
 bp = Blueprint("routes", __name__)
+ors_client = OpenRouteServiceClient()
 
 
 @bp.post("/safe-route")
 def safe_route():
-    """Return mock route data until OpenRouteService integration lands."""
+    """Fetch shortest + safest routes leveraging risk polygons."""
 
     payload = request.get_json(silent=True) or {}
     start = payload.get("start")
     end = payload.get("end")
-    return jsonify(mock_data.get_mock_route_response(start=start, end=end))
+    if not (start and end):
+        return jsonify({"error": "start and end payloads required"}), 400
+
+    risk_polygons = crime_data_service.get_risk_polygons({"start": start, "end": end})
+    avoid_geojson = {"type": "FeatureCollection", "features": risk_polygons} if risk_polygons else None
+    try:
+        shortest = ors_client.build_route(start, end)
+        safest = (
+            ors_client.build_route(start, end, avoid_geojson)
+            if avoid_geojson
+            else shortest
+        )
+    except RoutingError as exc:
+        return jsonify({"error": str(exc)}), 502
+
+    response = {
+        "start": start,
+        "end": end,
+        "shortest": summarize_route(shortest, avoided=0),
+        "safest": summarize_route(safest, avoided=len(risk_polygons)),
+        "risk_polygons": avoid_geojson,
+    }
+    return jsonify(response)
 
 
 @bp.get("/crime-heatmap")
 def crime_heatmap():
-    """Return mock heatmap features used by the Mapbox layer."""
+    """Return GeoJSON features powering the Mapbox heatmap layer."""
 
-    return jsonify(mock_data.get_mock_heatmap())
+    return jsonify(crime_data_service.get_heatmap())

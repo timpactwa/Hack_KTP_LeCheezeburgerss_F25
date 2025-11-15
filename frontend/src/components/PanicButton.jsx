@@ -33,7 +33,7 @@ function PanicButton({ disabled }) {
         type="button"
         className={`panic-button ${status}`}
         onClick={handleClick}
-        disabled={disabled}
+        disabled={disabled || !coords}
       >
         Panic Button
       </button>

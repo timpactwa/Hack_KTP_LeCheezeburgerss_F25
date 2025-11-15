@@ -1,12 +1,15 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { login as loginRequest, register as registerRequest } from "../services/api";
 
 const AuthContext = createContext(undefined);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem("sr_user");
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [token, setToken] = useState(() => localStorage.getItem("sr_token"));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const login = useCallback(async (credentials) => {
@@ -34,7 +37,25 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
+    localStorage.removeItem("sr_token");
+    localStorage.removeItem("sr_user");
   }, []);
+
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem("sr_token", token);
+    } else {
+      localStorage.removeItem("sr_token");
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("sr_user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("sr_user");
+    }
+  }, [user]);
 
   const value = useMemo(
     () => ({

@@ -8,11 +8,31 @@ import {
 } from "../mocks/mockData";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000";
-const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === "true";
 
 const client = axios.create({
   baseURL: API_BASE_URL,
 });
+
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem("sr_token");
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("sr_token");
+      localStorage.removeItem("sr_user");
+    }
+    return Promise.reject(error);
+  }
+);
 
 export async function login(payload) {
   if (USE_MOCK_API) {
@@ -52,4 +72,8 @@ export async function sendPanicAlert(payload) {
   }
   const { data } = await client.post("/panic-alert", payload);
   return data;
+}
+
+export function getApiClient() {
+  return client;
 }
