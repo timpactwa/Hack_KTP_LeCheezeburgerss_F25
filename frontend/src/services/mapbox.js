@@ -24,13 +24,15 @@ export function ensureGeoJSONSource(map, id, data) {
 }
 
 export function ensureLineLayer(map, options) {
-  const { id, sourceId, color, width = 4, dasharray } = options;
+  const { id, sourceId, color, width = 4, dasharray, opacity = 0.85, blur = 0.15 } = options;
   if (map.getLayer(id)) {
     map.setPaintProperty(id, "line-color", color);
     map.setPaintProperty(id, "line-width", width);
     if (dasharray) {
       map.setPaintProperty(id, "line-dasharray", dasharray);
     }
+    map.setPaintProperty(id, "line-opacity", opacity);
+    map.setPaintProperty(id, "line-blur", blur);
     return;
   }
   map.addLayer({
@@ -44,6 +46,8 @@ export function ensureLineLayer(map, options) {
     paint: {
       "line-color": color,
       "line-width": width,
+      "line-opacity": opacity,
+      "line-blur": blur,
       ...(dasharray ? { "line-dasharray": dasharray } : {}),
     },
   });
@@ -77,9 +81,8 @@ export function ensureHeatmapLayer(map, sourceId) {
 }
 
 export function ensurePolygonLayer(map, options) {
-  const { id, sourceId, color = "#f87171", opacity = 0.2 } = options;
+  const { id, sourceId, opacity = 0.35 } = options;
   if (map.getLayer(id)) {
-    map.setPaintProperty(id, "fill-color", color);
     map.setPaintProperty(id, "fill-opacity", opacity);
     return;
   }
@@ -88,13 +91,45 @@ export function ensurePolygonLayer(map, options) {
     type: "fill",
     source: sourceId,
     paint: {
-      "fill-color": color,
+      "fill-color": [
+        "interpolate",
+        ["linear"],
+        ["get", "risk_score"],
+        0,
+        "rgba(248, 113, 113, 0.2)",
+        5,
+        "rgba(251, 191, 36, 0.3)",
+        20,
+        "rgba(239, 68, 68, 0.55)",
+      ],
       "fill-opacity": opacity,
+      "fill-outline-color": "rgba(239, 68, 68, 0.9)",
     },
   });
 }
 
 export { mapboxgl };
+
+export function createMarkerElement({ color = "#34d399", label = "" }) {
+  const el = document.createElement("div");
+  el.className = "route-marker";
+  el.style.backgroundColor = color;
+  el.innerText = label;
+  return el;
+}
+
+export function animateLineOpacity(map, layerId, duration = 600) {
+  const start = performance.now();
+  map.setPaintProperty(layerId, "line-opacity", 0);
+  const tick = (now) => {
+    const progress = Math.min((now - start) / duration, 1);
+    map.setPaintProperty(layerId, "line-opacity", progress);
+    if (progress < 1) {
+      requestAnimationFrame(tick);
+    }
+  };
+  requestAnimationFrame(tick);
+}
 
 async function fetchMapbox(url, options) {
   if (!token) {

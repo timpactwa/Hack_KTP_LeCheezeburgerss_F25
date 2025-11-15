@@ -39,6 +39,18 @@ h3 {
   height: 100vh;
 }
 
+.route-marker {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  color: #0f172a;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+}
+
 .map-empty-state {
   display: flex;
   align-items: center;
@@ -70,6 +82,51 @@ section {
   border: 1px solid #334155;
   background: #0f172a;
   color: #f8fafc;
+}
+
+.address-field {
+  margin-bottom: 1rem;
+}
+
+.address-field__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.address-field__actions button {
+  flex: 1;
+  background: #1f2937;
+  color: #f8fafc;
+}
+
+.selected-address {
+  font-size: 0.85rem;
+  color: #cbd5f5;
+  margin: 0.1rem 0 0.4rem;
+}
+
+.suggestion-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 0.5rem;
+  max-height: 160px;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.suggestion-list li button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  padding: 0.35rem 0.6rem;
+}
+
+.suggestion-list li button:hover {
+  background: rgba(148, 163, 184, 0.2);
 }
 
 button {
