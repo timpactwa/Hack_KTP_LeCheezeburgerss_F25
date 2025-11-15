@@ -1,13 +1,26 @@
+import Spinner from "./Spinner";
 import { useDashboard } from "./dashboard-context";
 
 function RouteComparisonPanel() {
-  const { routeData, activeRouteKey, setActiveRouteKey, isRouteLoading } = useDashboard();
+  const { routeData, activeRouteKey, setActiveRouteKey, isRouteLoading, routeError, requestRoute, lastRouteParams } = useDashboard();
 
   if (isRouteLoading) {
     return (
       <section>
         <h2>Routes</h2>
-        <p>Generating your SafeRoute...</p>
+        <Spinner label="Generating your SafeRoute…" />
+      </section>
+    );
+  }
+
+  if (routeError) {
+    return (
+      <section>
+        <h2>Routes</h2>
+        <p className="error-text">We couldn&apos;t fetch routes.</p>
+        <button type="button" onClick={() => requestRoute(lastRouteParams)}>
+          Retry
+        </button>
       </section>
     );
   }
@@ -54,6 +67,7 @@ function RouteCard({ label, description, extra, isActive, onSelect }) {
       className={`route-card ${isActive ? "active" : ""}`}
       onClick={onSelect}
       type="button"
+      title={`${label}: ${extra}`}
     >
       <h3>{label}</h3>
       <p>{description}</p>

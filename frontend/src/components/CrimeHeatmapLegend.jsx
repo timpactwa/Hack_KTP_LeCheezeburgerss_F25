@@ -7,7 +7,7 @@ function CrimeHeatmapLegend() {
 
   return (
     <section>
-      <div className="legend-header">
+      <div className="legend-header" title="Toggle visibility of crime density layer">
         <h2>Crime Heatmap</h2>
         <label>
           <input

@@ -14,6 +14,7 @@ export function DashboardProvider({ children }) {
   const [activeRouteKey, setActiveRouteKey] = useState("safest");
   const { data: routeData, isLoading: isRouteLoading, error: routeError, requestRoute } =
     useSafeRoute();
+  const [lastRouteParams, setLastRouteParams] = useState(DEFAULT_COORDS);
 
   const {
     data: heatmapData,
@@ -47,7 +48,17 @@ export function DashboardProvider({ children }) {
 
   useEffect(() => {
     requestRoute(DEFAULT_COORDS).catch((err) => console.error("route init", err));
+    setLastRouteParams(DEFAULT_COORDS);
   }, [requestRoute]);
+
+  const triggerRouteRequest = useCallback(
+    (payload) => {
+      const params = payload || lastRouteParams || DEFAULT_COORDS;
+      setLastRouteParams(params);
+      return requestRoute(params);
+    },
+    [lastRouteParams, requestRoute]
+  );
 
   const value = useMemo(
     () => ({
@@ -56,7 +67,8 @@ export function DashboardProvider({ children }) {
       routeData,
       isRouteLoading,
       routeError,
-      requestRoute,
+      requestRoute: triggerRouteRequest,
+      lastRouteParams,
       heatmapVisible,
       setHeatmapVisible,
       heatmapData,
@@ -72,7 +84,8 @@ export function DashboardProvider({ children }) {
       routeData,
       isRouteLoading,
       routeError,
-      requestRoute,
+      triggerRouteRequest,
+      lastRouteParams,
       heatmapVisible,
       setHeatmapVisible,
       heatmapData,

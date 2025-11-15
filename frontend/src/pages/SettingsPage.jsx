@@ -153,8 +153,8 @@ function SettingsPage() {
         </form>
       </div>
 
-      <div className="settings-card">
-        <h2>Trusted Contacts</h2>
+        <div className="settings-card">
+          <h2>Trusted Contacts</h2>
         
         {isLoading ? (
           <p>Loading contacts...</p>
@@ -176,7 +176,7 @@ function SettingsPage() {
                     </button>
                   </li>
                 ))}
-              </ul>
+          </ul>
             )}
 
             <form onSubmit={handleAddContact} style={{ marginTop: "20px" }}>
@@ -206,7 +206,7 @@ function SettingsPage() {
             </form>
           </>
         )}
-      </div>
+        </div>
     </div>
   );
 }

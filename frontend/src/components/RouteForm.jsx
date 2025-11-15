@@ -37,8 +37,8 @@ function RouteForm() {
   const [endQuery, setEndQuery] = useState("");
   const [error, setError] = useState(null);
 
-  const { results: startSuggestions } = useGeocoder(startQuery);
-  const { results: endSuggestions } = useGeocoder(endQuery);
+  const { results: startSuggestions, isLoading: startLoading } = useGeocoder(startQuery);
+  const { results: endSuggestions, isLoading: endLoading } = useGeocoder(endQuery);
   const { coords: currentLocation, error: geolocationError } = useGeolocation();
 
   useEffect(() => {
@@ -126,6 +126,7 @@ function RouteForm() {
           query={startQuery}
           setQuery={setStartQuery}
           suggestions={startSuggestions}
+          loading={startLoading}
           onSelect={(feature) => handleSelectSuggestion("start", feature)}
           selectedLabel={startLabel}
           onUseCurrentLocation={() => handleUseCurrentLocation("start")}
@@ -137,6 +138,7 @@ function RouteForm() {
           query={endQuery}
           setQuery={setEndQuery}
           suggestions={endSuggestions}
+          loading={endLoading}
           onSelect={(feature) => handleSelectSuggestion("end", feature)}
           selectedLabel={endLabel}
           onUseCurrentLocation={() => handleUseCurrentLocation("end")}
@@ -165,6 +167,7 @@ function AddressField({
   query,
   setQuery,
   suggestions,
+  loading = false,
   onSelect,
   selectedLabel,
   onUseCurrentLocation,
@@ -191,6 +194,7 @@ function AddressField({
         </button>
       </div>
       <p className="selected-address">Selected: {selectedLabel}</p>
+      {loading && <p className="muted-text">Searching…</p>}
       {showSuggestions && (
         <ul className="suggestion-list">
           {suggestions.map((feature) => (
