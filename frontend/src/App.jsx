@@ -11,6 +11,14 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import SettingsPage from "./pages/SettingsPage";
 
+// Import logo for header - will be undefined if file doesn't exist
+let headerLogo;
+try {
+  headerLogo = new URL("./assets/images/logo.png", import.meta.url).href;
+} catch {
+  headerLogo = null;
+}
+
 function App() {
   return (
     <DashboardProvider>
@@ -42,7 +50,16 @@ function DashboardView() {
     <div className="app-shell">
       <aside className="side-panel">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h1 style={{ margin: 0, fontSize: "1.5rem" }}>SafeRoute NYC</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            {headerLogo && (
+              <img 
+                src={headerLogo} 
+                alt="SafeRoute NYC" 
+                className="header-logo"
+              />
+            )}
+            <h1 style={{ margin: 0, fontSize: "1.5rem" }}>SafeRoute NYC</h1>
+          </div>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <Link
               to="/settings"

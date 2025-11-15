@@ -9,6 +9,14 @@ import {
   updateUserProfile,
 } from "../services/api";
 
+// Import logo for header - will be undefined if file doesn't exist
+let headerLogo;
+try {
+  headerLogo = new URL("../assets/images/logo.png", import.meta.url).href;
+} catch {
+  headerLogo = null;
+}
+
 function SettingsPage() {
   const { user, updateUser, lastAlertAt } = useAuth();
   const [contacts, setContacts] = useState([]);
@@ -132,101 +140,108 @@ function SettingsPage() {
 
   return (
     <div className="settings-shell">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <h1 style={{ margin: 0 }}>Settings</h1>
-        <Link
-          to="/"
-          style={{
-            padding: "0.5rem 1rem",
-            background: "rgba(148, 163, 184, 0.2)",
-            color: "#f8fafc",
-            textDecoration: "none",
-            borderRadius: "0.5rem",
-            fontSize: "0.9rem",
-            border: "1px solid rgba(148, 163, 184, 0.3)",
-          }}
-        >
+      <div className="settings-header">
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {headerLogo && (
+            <img 
+              src={headerLogo} 
+              alt="SafeRoute NYC" 
+              className="header-logo"
+            />
+          )}
+          <h1>Settings</h1>
+        </div>
+        <Link to="/" className="back-button">
           ← Back to Map
         </Link>
       </div>
       
-      {error && <div className="error-text">{error}</div>}
+      {error && <div className="error-banner">{error}</div>}
 
       <div className="settings-card">
         <h2>User Profile</h2>
-        <form onSubmit={handleUpdateProfile}>
-          <label>
-            Default Phone Number
+        <form onSubmit={handleUpdateProfile} className="settings-form">
+          <div className="form-group">
+            <label htmlFor="default-phone">Default Phone Number</label>
             <input
+              id="default-phone"
               type="tel"
               value={defaultPhone}
               onChange={(e) => setDefaultPhone(e.target.value)}
               placeholder="+15555555555"
             />
-          </label>
-          <p className="muted-text">
-            Last panic alert: {lastAlertAt ? new Date(lastAlertAt).toLocaleString() : "No alerts yet"}
-          </p>
-          <button type="submit" disabled={isUpdatingProfile}>
+          </div>
+          <div className="info-text">
+            <span className="info-label">Last panic alert:</span>
+            <span>{lastAlertAt ? new Date(lastAlertAt).toLocaleString() : "No alerts yet"}</span>
+          </div>
+          <button type="submit" disabled={isUpdatingProfile} className="primary-button">
             {isUpdatingProfile ? "Updating..." : "Update Profile"}
           </button>
         </form>
       </div>
 
-        <div className="settings-card">
-          <h2>Trusted Contacts</h2>
+      <div className="settings-card">
+        <h2>Trusted Contacts</h2>
         
         {isLoading ? (
-          <p>Loading contacts...</p>
+          <p className="loading-text">Loading contacts...</p>
         ) : (
           <>
             {contacts.length === 0 ? (
-              <p>No contacts yet. Add one below.</p>
+              <p className="empty-state">No contacts yet. Add one below.</p>
             ) : (
-              <ul>
+              <ul className="contact-list">
                 {contacts.map((contact) => (
-                  <li key={contact.id}>
-                    <strong>{contact.name}</strong>: {contact.phone_number}
+                  <li key={contact.id} className="contact-item">
+                    <div className="contact-info">
+                      <span className="contact-name">{contact.name}</span>
+                      <span className="contact-phone">{contact.phone_number}</span>
+                    </div>
                     <button
                       onClick={() => handleDeleteContact(contact.id)}
-                      className="delete-btn"
-                      style={{ marginLeft: "10px", padding: "4px 8px" }}
+                      className="delete-button"
+                      type="button"
                     >
                       Delete
                     </button>
                   </li>
                 ))}
-          </ul>
+              </ul>
             )}
 
-            <form onSubmit={handleAddContact} style={{ marginTop: "20px" }}>
-              <h3>Add New Contact</h3>
-              <label>
-                Name (optional)
+            <div className="divider"></div>
+            
+            <form onSubmit={handleAddContact} className="settings-form">
+              <h3 className="form-section-title">Add New Contact</h3>
+              <div className="form-group">
+                <label htmlFor="contact-name">Name (optional)</label>
                 <input
+                  id="contact-name"
                   type="text"
                   value={newContactName}
                   onChange={(e) => setNewContactName(e.target.value)}
                   placeholder="Trusted Contact"
                 />
-              </label>
-              <label>
-                Phone Number *
+              </div>
+              <div className="form-group">
+                <label htmlFor="contact-phone">Phone Number <span className="required">*</span></label>
                 <input
+                  id="contact-phone"
                   type="tel"
                   value={newContactPhone}
                   onChange={(e) => setNewContactPhone(e.target.value)}
                   placeholder="+15555555555"
                   required
                 />
-              </label>
-              <button type="submit" disabled={isAdding}>
+              </div>
+              <button type="submit" disabled={isAdding} className="primary-button">
                 {isAdding ? "Adding..." : "Add Contact"}
               </button>
             </form>
           </>
         )}
-        </div>
+      </div>
     </div>
   );
 }

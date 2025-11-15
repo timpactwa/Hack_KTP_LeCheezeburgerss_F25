@@ -3,6 +3,15 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 
+// Import logo - will be undefined if file doesn't exist
+let logoImage;
+try {
+  logoImage = new URL("../assets/images/logo.png", import.meta.url).href;
+} catch {
+  // Logo file doesn't exist yet
+  logoImage = null;
+}
+
 function RegisterPage() {
   const { register, isSubmitting, user } = useAuth();
   const navigate = useNavigate();
@@ -29,6 +38,15 @@ function RegisterPage() {
   return (
     <div className="auth-shell">
       <form className="auth-card" onSubmit={handleSubmit}>
+        {logoImage && (
+          <div className="logo-container">
+            <img 
+              src={logoImage} 
+              alt="SafeRoute NYC Logo" 
+              className="logo"
+            />
+          </div>
+        )}
         <h1>Create account</h1>
         <p>Save trusted contacts to unlock the panic button.</p>
         <label>
