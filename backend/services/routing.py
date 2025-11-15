@@ -44,6 +44,7 @@ class OpenRouteServiceClient:
         if avoid_polygons:
             body["options"] = {"avoid_polygons": avoid_polygons}
 
+        # ORS API key format - use key directly (no Bearer prefix needed)
         headers = {"Authorization": self.api_key, "Content-Type": "application/json"}
         last_error: Optional[Exception] = None
 

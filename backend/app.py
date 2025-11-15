@@ -3,10 +3,32 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+
+# Load environment variables from .env file
+# Check in order: project root, backend directory, scripts directory
+project_root = Path(__file__).parent.parent
+env_locations = [
+    project_root / ".env",           # Project root (preferred)
+    Path(__file__).parent / ".env",  # Backend directory
+    project_root / "scripts" / ".env",  # Scripts directory (fallback)
+]
+
+env_path = None
+for location in env_locations:
+    if location.exists():
+        env_path = location
+        load_dotenv(location)
+        break
+
+if not env_path:
+    # Final fallback: try loading from current directory
+    load_dotenv()
 
 
 def create_app() -> Flask:
