@@ -46,11 +46,17 @@ class OpenRouteServiceClient:
             # ORS expects avoid_polygons as a MultiPolygon geometry object
             body["options"] = {"avoid_polygons": avoid_polygons}
             # Log polygon count if it's a MultiPolygon
-            if isinstance(avoid_polygons, dict) and avoid_polygons.get("type") == "MultiPolygon":
-                coord_count = len(avoid_polygons.get("coordinates", []))
-                LOGGER.info(f"Using avoid_polygons MultiPolygon with {coord_count} polygon(s)")
+            if isinstance(avoid_polygons, dict):
+                geom_type = avoid_polygons.get("type", "unknown")
+                if geom_type == "MultiPolygon":
+                    coord_count = len(avoid_polygons.get("coordinates", []))
+                    LOGGER.info(f"Using avoid_polygons MultiPolygon with {coord_count} polygon(s)")
+                elif geom_type == "Polygon":
+                    LOGGER.info(f"Using avoid_polygons Polygon (single polygon)")
+                else:
+                    LOGGER.info(f"Using avoid_polygons geometry: {geom_type}")
             else:
-                LOGGER.info(f"Using avoid_polygons geometry: {avoid_polygons.get('type', 'unknown')}")
+                LOGGER.warning(f"avoid_polygons is not a dict: {type(avoid_polygons)}")
 
         # ORS API key format - use key directly (no Bearer prefix needed)
         headers = {"Authorization": self.api_key, "Content-Type": "application/json"}
@@ -67,8 +73,14 @@ class OpenRouteServiceClient:
                 if response.status_code >= 400:
                     error_msg = response.text[:500] if response.text else "No error message"
                     LOGGER.error(f"ORS API error {response.status_code}: {error_msg}")
-                    if avoid_polygons:
-                        LOGGER.error(f"Request body had avoid_polygons with {len(avoid_polygons.get('features', []))} features")
+                    if avoid_polygons and isinstance(avoid_polygons, dict):
+                        geom_type = avoid_polygons.get("type", "unknown")
+                        if geom_type == "MultiPolygon":
+                            LOGGER.error(f"Request had avoid_polygons MultiPolygon with {len(avoid_polygons.get('coordinates', []))} polygons")
+                        elif geom_type == "Polygon":
+                            LOGGER.error(f"Request had avoid_polygons Polygon")
+                        else:
+                            LOGGER.error(f"Request had avoid_polygons type: {geom_type}")
                     raise RoutingError(f"ORS error {response.status_code}: {error_msg}")
 
                 data = response.json()

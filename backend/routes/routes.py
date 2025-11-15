@@ -28,52 +28,8 @@ def safe_route():
     logger = logging.getLogger(__name__)
     logger.info(f"Found {len(risk_polygons)} risk polygons for route")
     
-    # Convert FeatureCollection to MultiPolygon format for ORS API
-    # ORS expects avoid_polygons as a MultiPolygon geometry, not FeatureCollection
-    avoid_polygons_geometry = None
-    if risk_polygons:
-        from shapely.geometry import shape, MultiPolygon
-        try:
-            # Extract geometries from features and combine into MultiPolygon
-            geometries = []
-            for feature in risk_polygons:
-                geom = shape(feature["geometry"])
-                if geom.is_valid:
-                    geometries.append(geom)
-            
-            if geometries:
-                # Filter out very large polygons (ORS has a 200,000 km² limit)
-                # Also simplify complex polygons to reduce API payload size
-                filtered_geoms = []
-                for geom in geometries:
-                    # Check area (rough estimate: 1 degree² ≈ 12,000 km² at NYC latitude)
-                    # So 0.1 degree² ≈ 1,200 km² - reasonable limit
-                    if geom.area < 0.1:
-                        # Simplify polygon if it has too many points (reduce to ~100 points max)
-                        if hasattr(geom, 'exterior') and len(geom.exterior.coords) > 100:
-                            geom = geom.simplify(0.0001, preserve_topology=True)
-                        filtered_geoms.append(geom)
-                    else:
-                        logger.warning(f"Skipping large polygon (area: {geom.area:.4f})")
-                
-                if not filtered_geoms:
-                    logger.warning("All polygons filtered out due to size, using first polygon")
-                    filtered_geoms = geometries[:1] if geometries else []
-                
-                if filtered_geoms:
-                    # Combine all polygons into a MultiPolygon
-                    multipoly = MultiPolygon(filtered_geoms)
-                    if multipoly.is_valid:
-                        from shapely.geometry import mapping
-                        avoid_polygons_geometry = mapping(multipoly)
-                        logger.info(f"Created MultiPolygon with {len(filtered_geoms)} polygons for avoid_polygons")
-                    else:
-                        logger.warning("MultiPolygon is invalid, using first polygon")
-                        # Fallback: use first polygon if MultiPolygon fails
-                        avoid_polygons_geometry = mapping(filtered_geoms[0])
-        except Exception as e:
-            logger.error(f"Failed to create MultiPolygon: {e}")
-            avoid_polygons_geometry = None
+    # Don't create avoid_polygons_geometry here - let the adaptive strategy create it selectively
+    # This prevents using ALL polygons which blocks all alternative routes
     
     warnings: list[str] = []
     try:
@@ -82,77 +38,152 @@ def safe_route():
         warnings.append(str(exc))
         shortest = ors_client._fallback_route(start, end)
 
-    if avoid_polygons_geometry and len(risk_polygons) > 0:
+    if len(risk_polygons) > 0:
         try:
+            # Import all shapely functions at the top to avoid scope issues
+            from shapely.geometry import shape, LineString, MultiPolygon, mapping
+            
             # Check which polygons actually intersect the shortest route
-            from shapely.geometry import shape, LineString
             shortest_line = LineString(shortest.get("geometry", {}).get("coordinates", []))
             
+            # More precise selection: only polygons that directly intersect the route path
             intersecting_polygons = []
             for feature in risk_polygons:
                 try:
                     poly_shape = shape(feature["geometry"])
-                    if poly_shape.intersects(shortest_line) or poly_shape.distance(shortest_line) < 0.001:
+                    # Only include if polygon directly intersects the route line (not just nearby)
+                    if poly_shape.intersects(shortest_line):
                         intersecting_polygons.append(feature)
                 except Exception:
                     continue
             
-            logger.info(f"Found {len(intersecting_polygons)} polygons intersecting/close to shortest route")
+            logger.info(f"Found {len(intersecting_polygons)} polygons directly intersecting shortest route")
             
-            # If polygons intersect the route, use selective avoidance (only high-risk zones)
-            # Otherwise, use all polygons (they might block alternative routes)
+            # Adaptive strategy: try with fewer zones to find alternative routes
+            safest = None
+            zones_to_try = [3, 1]  # Try top 3, then top 1
+            
             if intersecting_polygons:
-                # Only avoid polygons that actually intersect the route
-                # Limit to top 10 highest risk zones to avoid overwhelming ORS
-                from shapely.geometry import shape, MultiPolygon
+                # Sort by risk score (highest first)
                 sorted_polygons = sorted(
                     intersecting_polygons,
                     key=lambda f: f.get("properties", {}).get("risk_score", 0),
                     reverse=True
-                )[:10]  # Top 10 highest risk zones
+                )
                 
-                logger.info(f"Using {len(sorted_polygons)} highest-risk intersecting polygons for avoidance")
+                for zone_count in zones_to_try:
+                    if len(sorted_polygons) < zone_count:
+                        continue
+                    
+                    # Take top N highest-risk zones
+                    selected_polygons = sorted_polygons[:zone_count]
+                    logger.info(f"Trying avoidance with top {len(selected_polygons)} highest-risk zones")
+                    
+                    # Build MultiPolygon with selected zones
+                    geometries = []
+                    for feature in selected_polygons:
+                        geom = shape(feature["geometry"])
+                        if geom.is_valid and geom.area < 0.1:
+                            # Simplify if too complex
+                            if hasattr(geom, 'exterior') and len(geom.exterior.coords) > 100:
+                                geom = geom.simplify(0.0001, preserve_topology=True)
+                            geometries.append(geom)
+                    
+                    if geometries:
+                        # Try MultiPolygon first
+                        if len(geometries) > 1:
+                            try:
+                                multipoly = MultiPolygon(geometries)
+                                if multipoly.is_valid:
+                                    test_avoid_polygons = mapping(multipoly)
+                                    logger.info(f"Created valid MultiPolygon with {len(geometries)} polygons")
+                                else:
+                                    # MultiPolygon invalid - try to fix by buffering slightly
+                                    logger.warning(f"MultiPolygon invalid, trying to fix...")
+                                    # Try using just the first few polygons
+                                    test_geoms = geometries[:min(3, len(geometries))]
+                                    if len(test_geoms) > 1:
+                                        multipoly = MultiPolygon(test_geoms)
+                                        if multipoly.is_valid:
+                                            test_avoid_polygons = mapping(multipoly)
+                                            logger.info(f"Created valid MultiPolygon with {len(test_geoms)} polygons (reduced)")
+                                        else:
+                                            # Fall back to single polygon
+                                            test_avoid_polygons = mapping(geometries[0])
+                                            logger.info(f"Using single polygon fallback")
+                                    else:
+                                        test_avoid_polygons = mapping(geometries[0])
+                                        logger.info(f"Using single polygon (only one geometry)")
+                            except Exception as e:
+                                logger.warning(f"Error creating MultiPolygon: {e}, using first polygon")
+                                test_avoid_polygons = mapping(geometries[0])
+                        else:
+                            # Only one geometry - use as single Polygon
+                            test_avoid_polygons = mapping(geometries[0])
+                            logger.info(f"Using single Polygon (1 geometry)")
+                        
+                        try:
+                            test_safest = ors_client.build_route(start, end, test_avoid_polygons)
+                            
+                            # Check if this route is different from shortest
+                            shortest_coords = shortest.get("geometry", {}).get("coordinates", [])
+                            test_coords = test_safest.get("geometry", {}).get("coordinates", [])
+                            
+                            # Compare routes - they're different if coordinates differ
+                            if len(test_coords) != len(shortest_coords) or test_coords != shortest_coords:
+                                safest = test_safest
+                                avoid_polygons_geometry = test_avoid_polygons
+                                logger.info(f"✅ Successfully found different route using {len(geometries)} zones")
+                                break
+                            else:
+                                logger.info(f"Route with {len(geometries)} zones is identical, trying fewer zones...")
+                        except RoutingError as e:
+                            logger.warning(f"Failed to build route with {len(geometries)} zones: {e}")
+                            continue
                 
-                # Rebuild MultiPolygon with only intersecting polygons
-                geometries = []
-                for feature in sorted_polygons:
-                    geom = shape(feature["geometry"])
+                # If we still don't have a different route, try one more time with just the highest-risk zone
+                if safest is None and len(sorted_polygons) > 0:
+                    logger.info("Trying with single highest-risk zone")
+                    top_zone = sorted_polygons[0]
+                    geom = shape(top_zone["geometry"])
                     if geom.is_valid and geom.area < 0.1:
-                        geometries.append(geom)
-                
-                if geometries:
-                    multipoly = MultiPolygon(geometries)
-                    if multipoly.is_valid:
-                        from shapely.geometry import mapping
-                        avoid_polygons_geometry = mapping(multipoly)
-                        logger.info(f"Created selective MultiPolygon with {len(geometries)} intersecting polygons")
-                    else:
-                        logger.warning("Selective MultiPolygon invalid, using original")
+                        single_zone_avoid = mapping(geom)
+                        try:
+                            safest = ors_client.build_route(start, end, single_zone_avoid)
+                            # Verify it's different
+                            shortest_coords = shortest.get("geometry", {}).get("coordinates", [])
+                            safest_coords = safest.get("geometry", {}).get("coordinates", [])
+                            if len(safest_coords) == len(shortest_coords) and safest_coords == shortest_coords:
+                                logger.warning("Even single highest-risk zone produces identical route")
+                                warnings.append("No alternative route available - all paths blocked by risk zones")
+                            else:
+                                logger.info("Found different route using single highest-risk zone")
+                        except RoutingError:
+                            logger.warning("Failed to build route even with single zone")
             else:
-                logger.info("No polygons intersect shortest route - using all polygons for alternative route avoidance")
+                logger.info("No polygons directly intersect shortest route")
             
-            logger.info(f"Building safest route with avoid_polygons MultiPolygon")
-            safest = ors_client.build_route(start, end, avoid_polygons_geometry)
-            
-            # Check if routes are actually different by comparing coordinates
-            shortest_coords = shortest.get("geometry", {}).get("coordinates", [])
-            safest_coords = safest.get("geometry", {}).get("coordinates", [])
-            
-            if len(shortest_coords) == len(safest_coords) and shortest_coords == safest_coords:
-                logger.warning("Safest route is identical to shortest route")
-                if len(intersecting_polygons) > 0:
-                    warnings.append(f"Safest route matches shortest - {len(intersecting_polygons)} risk zones may block all alternatives")
+            # Final check: if we still don't have a different route, use shortest
+            if safest is None:
+                logger.warning("Could not find alternative route - using shortest")
+                safest = shortest
+                warnings.append("Safest route matches shortest - dense risk zones may block all alternatives")
+            else:
+                # Final verification that routes are different
+                shortest_coords = shortest.get("geometry", {}).get("coordinates", [])
+                safest_coords = safest.get("geometry", {}).get("coordinates", [])
+                if len(shortest_coords) == len(safest_coords) and shortest_coords == safest_coords:
+                    logger.warning("Final check: routes are still identical")
+                    warnings.append("Routes are identical - no safer alternative available")
                 else:
-                    warnings.append("Safest route matches shortest - no alternative route available")
-            else:
-                logger.info(f"Routes differ: shortest has {len(shortest_coords)} points, safest has {len(safest_coords)} points")
+                    logger.info(f"✅ Routes differ: shortest has {len(shortest_coords)} points, safest has {len(safest_coords)} points")
                 
         except RoutingError as exc:
             warnings.append(f"Safest route fallback: {exc}")
             logger.error(f"Failed to build safest route: {exc}")
             safest = shortest
         except Exception as e:
-            logger.error(f"Error processing polygons for safest route: {e}")
+            logger.error(f"Error processing polygons for safest route: {e}", exc_info=True)
             safest = shortest
     else:
         logger.info("No risk polygons found, using shortest route for both")
