@@ -9,7 +9,7 @@ requests==2.31.0
 shapely==2.0.2
 scikit-learn==1.4.1.post1
 pandas==2.2.1
-geojson==3.0.1
+geojson>=3.0.0
 twilio==9.0.2
 gunicorn==21.2.0
 pytest==8.3.3
