@@ -29,6 +29,27 @@ RELEVANT_CATEGORIES = {
     "felony assault", "rape", "murder", "shooting"
 }
 
+# Weight mapping for different crime types (0.0 to 1.0)
+CRIME_WEIGHTS = {
+    "murder": 1.0,
+    "rape": 0.95,
+    "shooting": 0.9,
+    "felony assault": 0.85,
+    "robbery": 0.8,
+    "assault": 0.7,
+    "burglary": 0.65,
+    "grand larceny": 0.6,
+}
+
+
+def get_crime_weight(category: str) -> float:
+    """Get weight for a crime category based on severity."""
+    category_lower = category.lower()
+    for crime_type, weight in CRIME_WEIGHTS.items():
+        if crime_type in category_lower:
+            return weight
+    return 0.7  # Default weight for other relevant crimes
+
 # Time window: 8 PM (20:00) to 5 AM (05:00)
 NIGHT_HOURS = set(range(20, 24)) | set(range(0, 6))
 
@@ -46,20 +67,93 @@ def load_raw_data(file_path: Path) -> List[Dict[str, Any]]:
     elif file_path.suffix == '.csv':
         # If you get CSV data, you'll need pandas
         import pandas as pd
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, low_memory=False)
+        
+        # Normalize column names (handle case variations)
+        df.columns = df.columns.str.strip().str.lower()
+        
+        # Find coordinate columns (try common variations)
+        # Prioritize separate lat/lon columns over combined lat_lon
+        lng_col = None
+        lat_col = None
+        
+        # First pass: look for separate latitude/longitude columns
+        for col in df.columns:
+            col_lower = col.lower()
+            if col_lower == 'longitude' or (col_lower.startswith('longitude') and 'lat' not in col_lower):
+                lng_col = col
+            elif col_lower == 'latitude' or (col_lower.startswith('latitude') and 'lon' not in col_lower):
+                lat_col = col
+        
+        # If we found both, we're done
+        if lng_col and lat_col:
+            pass
+        # Otherwise, look for any lon/lat containing columns
+        elif not lng_col or not lat_col:
+            for col in df.columns:
+                col_lower = col.lower()
+                if not lng_col and ('longitude' in col_lower or ('lon' in col_lower and 'lat' not in col_lower)):
+                    lng_col = col
+                elif not lat_col and ('latitude' in col_lower or ('lat' in col_lower and 'lon' not in col_lower)):
+                    lat_col = col
+        
+        if not lng_col or not lat_col:
+            raise ValueError(f"Could not find longitude/latitude columns. Found: {list(df.columns)}")
+        
         # Convert CSV to GeoJSON features format
         features = []
         for _, row in df.iterrows():
+            # Skip rows with invalid coordinates
+            try:
+                lng = float(row[lng_col])
+                lat = float(row[lat_col])
+                # Skip if coordinates are 0,0 (invalid)
+                if lng == 0 and lat == 0:
+                    continue
+            except (ValueError, TypeError):
+                continue
+            
+            # Extract hour from time column (try common variations)
+            hour = None
+            for time_col in ['cmplnt_fr_tm', 'hour', 'time', 'complaint_time']:
+                if time_col in df.columns:
+                    time_val = row[time_col]
+                    if pd.notna(time_val):
+                        time_str = str(time_val)
+                        # Parse "HH:MM:SS" or "HH:MM" format
+                        if ':' in time_str:
+                            hour = int(time_str.split(':')[0])
+                            break
+            
+            # Extract category (try common variations)
+            category = 'unknown'
+            for cat_col in ['ofns_desc', 'category', 'offense', 'crime_type']:
+                if cat_col in df.columns:
+                    cat_val = row[cat_col]
+                    if pd.notna(cat_val):
+                        category = str(cat_val).lower()
+                        break
+            
+            # Extract date
+            date = ''
+            for date_col in ['cmplnt_fr_dt', 'date', 'complaint_date']:
+                if date_col in df.columns:
+                    date_val = row[date_col]
+                    if pd.notna(date_val):
+                        date = str(date_val)
+                        break
+            
             features.append({
                 'type': 'Feature',
                 'geometry': {
                     'type': 'Point',
-                    'coordinates': [row['longitude'], row['latitude']]
+                    'coordinates': [lng, lat]
                 },
                 'properties': {
-                    'hour': row.get('hour', row.get('CMPLNT_FR_TM', '12:00:00')[:2]),
-                    'category': row.get('category', row.get('OFNS_DESC', 'unknown')).lower(),
-                    'date': row.get('date', row.get('CMPLNT_FR_DT', ''))
+                    'hour': hour,
+                    'category': category,
+                    'date': date,
+                    'weight': get_crime_weight(category)
                 }
             })
         return features

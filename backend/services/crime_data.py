@@ -37,19 +37,25 @@ def _default_dataset() -> dict:
 class CrimeDataService:
     dataset_path: Path
     polygons_path: Path | None = None
+    heatmap_path: Path | None = None  # Add heatmap path
     
     def __post_init__(self) -> None:
         self.features = self._load_features()
         self.risk_polygons_cache = self._load_polygons() if self.polygons_path else None
     
     def _load_features(self) -> List[dict]:
-        """Load crime point features from dataset."""
-        if self.dataset_path.exists():
+        """Load crime point features from dataset or processed heatmap."""
+        # Try processed heatmap first, then fallback to raw dataset
+        if self.heatmap_path and self.heatmap_path.exists():
+            with self.heatmap_path.open() as fh:
+                data = json.load(fh)
+            return data.get("features", [])
+        elif self.dataset_path.exists():
             with self.dataset_path.open() as fh:
                 data = json.load(fh)
+            return data.get("features", [])
         else:
-            data = _default_dataset()
-        return data.get("features", [])
+            return _default_dataset().get("features", [])
     
     def _load_polygons(self) -> List[dict] | None:
         """Load pre-processed risk polygons."""
@@ -136,7 +142,9 @@ class CrimeDataService:
 
 DATASET_PATH = Path(__file__).resolve().parents[2] / "data" / "raw" / "nyc_crime_sample.geojson"
 POLYGONS_PATH = Path(__file__).resolve().parents[2] / "data" / "processed" / "risk_polygons.geojson"
+HEATMAP_PATH = Path(__file__).resolve().parents[2] / "data" / "processed" / "crime_heatmap.geojson"
 crime_data_service = CrimeDataService(
     dataset_path=DATASET_PATH,
-    polygons_path=POLYGONS_PATH
+    polygons_path=POLYGONS_PATH,
+    heatmap_path=HEATMAP_PATH
 )
