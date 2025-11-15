@@ -44,7 +44,11 @@ class OpenRouteServiceClient:
         if avoid_polygons:
             body["options"] = {"avoid_polygons": avoid_polygons}
 
-        headers = {"Authorization": self.api_key, "Content-Type": "application/json"}
+        headers = {
+            "Authorization": self.api_key,
+            "Content-Type": "application/json; charset=utf-8",
+            "Accept": "application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8",
+        }
         last_error: Optional[Exception] = None
 
         for attempt in range(1, self.max_retries + 1):
