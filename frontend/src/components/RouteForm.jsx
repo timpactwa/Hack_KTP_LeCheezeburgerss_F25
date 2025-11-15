@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useDashboard } from "./dashboard-context";
+import { useGeolocation } from "../hooks/useGeolocation";
+import { useGeocoder } from "../hooks/useGeocoder";
+import { reverseGeocode } from "../services/mapbox";
 
-const DEFAULT_START = "40.73061,-74.00070";
-const DEFAULT_END = "40.71520,-73.98300";
+const DEFAULT_START = { lat: 40.73061, lng: -74.0007 };
+const DEFAULT_END = { lat: 40.7152, lng: -73.983 };
 
 const PRESETS = [
   {
@@ -13,23 +16,78 @@ const PRESETS = [
   },
   {
     label: "Times Sq ➜ Brooklyn Bridge",
-    start: "40.7580,-73.9855",
-    end: "40.7061,-73.9969",
+    start: { lat: 40.758, lng: -73.9855 },
+    end: { lat: 40.7061, lng: -73.9969 },
   },
 ];
 
 function RouteForm() {
-  const { requestRoute, isRouteLoading } = useDashboard();
-  const [start, setStart] = useState(DEFAULT_START);
-  const [end, setEnd] = useState(DEFAULT_END);
+  const {
+    requestRoute,
+    isRouteLoading,
+    beginMapSelection,
+    registerMapSelectionHandler,
+    mapSelectionTarget,
+  } = useDashboard();
+  const [startCoords, setStartCoords] = useState(DEFAULT_START);
+  const [endCoords, setEndCoords] = useState(DEFAULT_END);
+  const [startLabel, setStartLabel] = useState(formatCoords(DEFAULT_START));
+  const [endLabel, setEndLabel] = useState(formatCoords(DEFAULT_END));
+  const [startQuery, setStartQuery] = useState("");
+  const [endQuery, setEndQuery] = useState("");
   const [error, setError] = useState(null);
+
+  const { results: startSuggestions } = useGeocoder(startQuery);
+  const { results: endSuggestions } = useGeocoder(endQuery);
+  const { coords: currentLocation, error: geolocationError } = useGeolocation();
+
+  useEffect(() => {
+    const cleanupStart = registerMapSelectionHandler("start", (coords) => {
+      applyCoords("start", coords);
+    });
+    const cleanupEnd = registerMapSelectionHandler("end", (coords) => {
+      applyCoords("end", coords);
+    });
+    return () => {
+      cleanupStart();
+      cleanupEnd();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registerMapSelectionHandler]);
+
+  const applyCoords = async (field, coords, labelHint) => {
+    const label = labelHint || formatCoords(coords);
+    if (field === "start") {
+      setStartCoords(coords);
+      setStartLabel(label);
+      setStartQuery("");
+    } else {
+      setEndCoords(coords);
+      setEndLabel(label);
+      setEndQuery("");
+    }
+    try {
+      const feature = await reverseGeocode(coords.lng, coords.lat);
+      if (feature) {
+        if (field === "start") {
+          setStartLabel(feature.place_name);
+        } else {
+          setEndLabel(feature.place_name);
+        }
+      }
+    } catch (reverseErr) {
+      console.warn("reverse geocode failed", reverseErr);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const parsedStart = parseCoord(start, DEFAULT_START);
-    const parsedEnd = parseCoord(end, DEFAULT_END);
+    if (!startCoords || !endCoords) {
+      setError("Select both start and end locations");
+      return;
+    }
     try {
-      await requestRoute({ start: parsedStart, end: parsedEnd });
+      await requestRoute({ start: startCoords, end: endCoords });
       setError(null);
     } catch (err) {
       setError("Unable to fetch routes right now");
@@ -37,26 +95,55 @@ function RouteForm() {
     }
   };
 
+  const handleSelectSuggestion = (field, feature) => {
+    const coords = { lat: feature.center[1], lng: feature.center[0] };
+    applyCoords(field, coords, feature.place_name);
+  };
+
+  const handleUseCurrentLocation = (field) => {
+    if (!currentLocation) {
+      setError("Geolocation unavailable");
+      return;
+    }
+    applyCoords(field, currentLocation, "Current location");
+  };
+
   const usePreset = (preset) => {
-    setStart(preset.start);
-    setEnd(preset.end);
     setError(null);
-    requestRoute({ start: parseCoord(preset.start), end: parseCoord(preset.end) });
+    applyCoords("start", preset.start, preset.label.split("➜")[0].trim());
+    applyCoords("end", preset.end, preset.label.split("➜")[1].trim());
+    requestRoute({ start: preset.start, end: preset.end }).catch((err) =>
+      console.error("preset route error", err)
+    );
   };
 
   return (
     <section>
       <h2>Plan a Route</h2>
       <form className="route-form" onSubmit={handleSubmit}>
-        <label>
-          Start (lat,lng)
-          <input value={start} onChange={(e) => setStart(e.target.value)} />
-        </label>
-        <label>
-          End (lat,lng)
-          <input value={end} onChange={(e) => setEnd(e.target.value)} />
-        </label>
-        <button type="submit" disabled={isRouteLoading}>
+        <AddressField
+          label="Start"
+          query={startQuery}
+          setQuery={setStartQuery}
+          suggestions={startSuggestions}
+          onSelect={(feature) => handleSelectSuggestion("start", feature)}
+          selectedLabel={startLabel}
+          onUseCurrentLocation={() => handleUseCurrentLocation("start")}
+          onPickOnMap={() => beginMapSelection("start")}
+          picking={mapSelectionTarget === "start"}
+        />
+        <AddressField
+          label="End"
+          query={endQuery}
+          setQuery={setEndQuery}
+          suggestions={endSuggestions}
+          onSelect={(feature) => handleSelectSuggestion("end", feature)}
+          selectedLabel={endLabel}
+          onUseCurrentLocation={() => handleUseCurrentLocation("end")}
+          onPickOnMap={() => beginMapSelection("end")}
+          picking={mapSelectionTarget === "end"}
+        />
+        <button type="submit" disabled={isRouteLoading || !startCoords || !endCoords}>
           {isRouteLoading ? "Loading routes..." : "Generate routes"}
         </button>
       </form>
@@ -67,18 +154,60 @@ function RouteForm() {
           </button>
         ))}
         {error && <p className="error-text">{error}</p>}
+        {geolocationError && <p className="error-text">{geolocationError}</p>}
       </div>
     </section>
   );
 }
 
-function parseCoord(value, fallbackString) {
-  const [lat, lng] = (value || fallbackString).split(",").map((num) => Number(num.trim()));
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    return { lat, lng };
-  }
-  const [fLat, fLng] = fallbackString.split(",").map((num) => Number(num.trim()));
-  return { lat: fLat, lng: fLng };
+function AddressField({
+  label,
+  query,
+  setQuery,
+  suggestions,
+  onSelect,
+  selectedLabel,
+  onUseCurrentLocation,
+  onPickOnMap,
+  picking,
+}) {
+  const showSuggestions = suggestions.length > 0 && query.length >= 3;
+  return (
+    <div className="address-field">
+      <label>
+        {label}
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search address or landmark"
+        />
+      </label>
+      <div className="address-field__actions">
+        <button type="button" onClick={onUseCurrentLocation}>
+          Use my location
+        </button>
+        <button type="button" onClick={onPickOnMap}>
+          {picking ? "Click on map..." : "Pick on map"}
+        </button>
+      </div>
+      <p className="selected-address">Selected: {selectedLabel}</p>
+      {showSuggestions && (
+        <ul className="suggestion-list">
+          {suggestions.map((feature) => (
+            <li key={feature.id}>
+              <button type="button" onClick={() => onSelect(feature)}>
+                {feature.place_name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function formatCoords(coords) {
+  return `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
 }
 
 export default RouteForm;

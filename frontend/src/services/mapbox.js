@@ -95,3 +95,43 @@ export function ensurePolygonLayer(map, options) {
 }
 
 export { mapboxgl };
+
+async function fetchMapbox(url, options) {
+  if (!token) {
+    throw new Error("Missing Mapbox access token");
+  }
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`Mapbox request failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function forwardGeocode(query, { limit = 5, signal } = {}) {
+  if (!query || query.length < 3) {
+    return [];
+  }
+  const endpoint = new URL(
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`
+  );
+  endpoint.searchParams.set("access_token", token);
+  endpoint.searchParams.set("autocomplete", "true");
+  endpoint.searchParams.set("limit", String(limit));
+  endpoint.searchParams.set("language", "en");
+  const data = await fetchMapbox(endpoint, { signal });
+  return data.features || [];
+}
+
+export async function reverseGeocode(lng, lat, { signal } = {}) {
+  if (typeof lng !== "number" || typeof lat !== "number") {
+    return null;
+  }
+  const endpoint = new URL(
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json`
+  );
+  endpoint.searchParams.set("access_token", token);
+  endpoint.searchParams.set("limit", "1");
+  endpoint.searchParams.set("language", "en");
+  const data = await fetchMapbox(endpoint, { signal });
+  return data.features?.[0] || null;
+}

@@ -13,7 +13,7 @@ import { useDashboard } from "./dashboard-context";
 function MapDashboard() {
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
-  const { routeData, heatmapData, activeRouteKey, heatmapVisible } = useDashboard();
+  const { routeData, heatmapData, activeRouteKey, heatmapVisible, mapSelectionTarget, completeMapSelection } = useDashboard();
 
   useEffect(() => {
     if (!mapNodeRef.current || mapRef.current) {
@@ -26,6 +26,19 @@ function MapDashboard() {
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-left");
     return () => mapRef.current?.remove();
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const handleClick = (event) => {
+      if (!mapSelectionTarget) return;
+      completeMapSelection({ lat: event.lngLat.lat, lng: event.lngLat.lng });
+    };
+    map.on("click", handleClick);
+    return () => {
+      map.off("click", handleClick);
+    };
+  }, [mapSelectionTarget, completeMapSelection]);
 
   useEffect(() => {
     const map = mapRef.current;

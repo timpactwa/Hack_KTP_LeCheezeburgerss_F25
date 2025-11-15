@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchCrimeHeatmap } from "../services/api";
@@ -21,6 +21,29 @@ export function DashboardProvider({ children }) {
     error: heatmapError,
   } = useQuery({ queryKey: ["crime-heatmap"], queryFn: fetchCrimeHeatmap });
   const [heatmapVisible, setHeatmapVisible] = useState(true);
+  const [mapSelectionTarget, setMapSelectionTarget] = useState(null);
+  const mapSelectionCallbacks = useRef({});
+
+  const registerMapSelectionHandler = useCallback((field, handler) => {
+    mapSelectionCallbacks.current[field] = handler;
+    return () => {
+      delete mapSelectionCallbacks.current[field];
+    };
+  }, []);
+
+  const beginMapSelection = useCallback((field) => {
+    setMapSelectionTarget(field);
+  }, []);
+
+  const completeMapSelection = useCallback(
+    (coords) => {
+      if (mapSelectionTarget && mapSelectionCallbacks.current[mapSelectionTarget]) {
+        mapSelectionCallbacks.current[mapSelectionTarget](coords);
+      }
+      setMapSelectionTarget(null);
+    },
+    [mapSelectionTarget]
+  );
 
   useEffect(() => {
     requestRoute(DEFAULT_COORDS).catch((err) => console.error("route init", err));
@@ -39,6 +62,10 @@ export function DashboardProvider({ children }) {
       heatmapData,
       isHeatmapLoading,
       heatmapError,
+      mapSelectionTarget,
+      beginMapSelection,
+      registerMapSelectionHandler,
+      completeMapSelection,
     }),
     [
       activeRouteKey,
@@ -51,6 +78,10 @@ export function DashboardProvider({ children }) {
       heatmapData,
       isHeatmapLoading,
       heatmapError,
+      mapSelectionTarget,
+      beginMapSelection,
+      registerMapSelectionHandler,
+      completeMapSelection,
     ]
   );
 
