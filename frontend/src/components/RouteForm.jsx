@@ -8,18 +8,6 @@ import { reverseGeocode } from "../services/mapbox";
 const DEFAULT_START = { lat: 40.73061, lng: -74.0007 };
 const DEFAULT_END = { lat: 40.7152, lng: -73.983 };
 
-const PRESETS = [
-  {
-    label: "NYU ➜ Lower East Side",
-    start: DEFAULT_START,
-    end: DEFAULT_END,
-  },
-  {
-    label: "Times Sq ➜ Brooklyn Bridge",
-    start: { lat: 40.758, lng: -73.9855 },
-    end: { lat: 40.7061, lng: -73.9969 },
-  },
-];
 
 function RouteForm() {
   const {
@@ -111,14 +99,6 @@ function RouteForm() {
     applyCoords(field, currentLocation, "Current location");
   };
 
-  const usePreset = (preset) => {
-    setError(null);
-    applyCoords("start", preset.start, preset.label.split("➜")[0].trim());
-    applyCoords("end", preset.end, preset.label.split("➜")[1].trim());
-    requestRoute({ start: preset.start, end: preset.end }).catch((err) =>
-      console.error("preset route error", err)
-    );
-  };
 
   return (
     <section>
@@ -151,16 +131,9 @@ function RouteForm() {
         <button type="submit" disabled={isRouteLoading || !startCoords || !endCoords}>
           {isRouteLoading ? "Loading routes..." : "Generate routes"}
         </button>
-      </form>
-      <div className="preset-list">
-        {PRESETS.map((preset) => (
-          <button key={preset.label} type="button" onClick={() => usePreset(preset)}>
-            {preset.label}
-          </button>
-        ))}
         {error && <p className="error-text">{error}</p>}
         {geolocationError && <p className="error-text">{geolocationError}</p>}
-      </div>
+      </form>
     </section>
   );
 }

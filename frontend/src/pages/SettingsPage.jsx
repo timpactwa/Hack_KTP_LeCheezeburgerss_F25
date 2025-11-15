@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import {
@@ -131,7 +132,23 @@ function SettingsPage() {
 
   return (
     <div className="settings-shell">
-      <h1>Settings</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+        <h1 style={{ margin: 0 }}>Settings</h1>
+        <Link
+          to="/"
+          style={{
+            padding: "0.5rem 1rem",
+            background: "rgba(148, 163, 184, 0.2)",
+            color: "#f8fafc",
+            textDecoration: "none",
+            borderRadius: "0.5rem",
+            fontSize: "0.9rem",
+            border: "1px solid rgba(148, 163, 184, 0.3)",
+          }}
+        >
+          ← Back to Map
+        </Link>
+      </div>
       
       {error && <div className="error-text">{error}</div>}
 

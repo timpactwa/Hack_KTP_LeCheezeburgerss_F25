@@ -47,17 +47,42 @@ def register():
 
 @bp.post("/login")
 def login():
+    import logging
+    logger = logging.getLogger(__name__)
+    
     body = request.get_json(silent=True) or {}
     email = body.get("email", "").strip()
     password = body.get("password", "")
+    
+    logger.info(f"Login attempt for email: {email}")
+    
     if not email or not password:
+        logger.warning("Login failed: missing email or password")
         return jsonify({"error": "email and password required"}), 400
 
     with db_session() as session:
+        # Debug: Check all users
+        from .. import models
+        all_users = session.query(models.User).all()
+        logger.info(f"Total users in database: {len(all_users)}")
+        logger.info(f"User emails: {[u.email for u in all_users]}")
+        
         user = auth_service.get_user_by_email(session, email)
-        if not user or not auth_service.verify_password(password, user.password_hash):
-            return jsonify({"error": "invalid credentials"}), 401
+        logger.info(f"User lookup result: {user.email if user else 'None'}")
+        
+        if not user:
+            logger.warning(f"Login failed: user not found for email {email}")
+            return jsonify({"error": "User not found. Please register first."}), 401
+        
+        password_valid = auth_service.verify_password(password, user.password_hash)
+        logger.info(f"Password verification result: {password_valid}")
+        
+        if not password_valid:
+            logger.warning(f"Login failed: invalid password for email {email}")
+            return jsonify({"error": "Invalid password"}), 401
+        
         token = create_access_token(identity=str(user.id))
         user_payload = _serialize_user(user)
         session.expunge(user)
+        logger.info(f"Login successful for email: {email}")
         return jsonify({"token": token, "user": user_payload})

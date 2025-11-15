@@ -16,8 +16,9 @@ function LoginPage() {
       await login({ email, password });
       navigate("/");
     } catch (err) {
-      setError("Login failed");
-      console.error(err);
+      const errorMessage = err.response?.data?.error || err.message || "Login failed";
+      setError(errorMessage);
+      console.error("Login error:", err);
     }
   };
 

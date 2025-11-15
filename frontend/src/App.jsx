@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 import CrimeHeatmapLegend from "./components/CrimeHeatmapLegend";
 import PanicButton from "./components/PanicButton";
@@ -37,9 +37,45 @@ function RequireAuth() {
 
 function DashboardView() {
   const { isRouteLoading } = useDashboard();
+  const { user, logout } = useAuth();
   return (
     <div className="app-shell">
       <aside className="side-panel">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <h1 style={{ margin: 0, fontSize: "1.5rem" }}>SafeRoute NYC</h1>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <Link
+              to="/settings"
+              style={{
+                padding: "0.5rem 1rem",
+                background: "rgba(148, 163, 184, 0.2)",
+                color: "#f8fafc",
+                textDecoration: "none",
+                borderRadius: "0.5rem",
+                fontSize: "0.9rem",
+                border: "1px solid rgba(148, 163, 184, 0.3)",
+              }}
+            >
+              Settings
+            </Link>
+            {user && (
+              <button
+                onClick={logout}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: "rgba(239, 68, 68, 0.2)",
+                  color: "#f87171",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                }}
+              >
+                Logout
+              </button>
+            )}
+          </div>
+        </div>
         <RouteForm />
         <RouteComparisonPanel />
         <CrimeHeatmapLegend />

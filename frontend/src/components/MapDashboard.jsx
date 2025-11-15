@@ -115,7 +115,48 @@ function MapDashboard() {
     return () => {
       if (mapRef.current) {
         console.log("Cleaning up map");
-        mapRef.current.remove();
+        // Clean up selection markers first
+        if (selectionStartMarkerRef.current) {
+          try {
+            selectionStartMarkerRef.current.remove();
+          } catch (e) {
+            // Marker might already be removed
+          }
+          selectionStartMarkerRef.current = null;
+        }
+        if (selectionEndMarkerRef.current) {
+          try {
+            selectionEndMarkerRef.current.remove();
+          } catch (e) {
+            // Marker might already be removed
+          }
+          selectionEndMarkerRef.current = null;
+        }
+        // Clean up route markers
+        if (startMarkerRef.current) {
+          try {
+            startMarkerRef.current.remove();
+          } catch (e) {}
+          startMarkerRef.current = null;
+        }
+        if (endMarkerRef.current) {
+          try {
+            endMarkerRef.current.remove();
+          } catch (e) {}
+          endMarkerRef.current = null;
+        }
+        waypointMarkersRef.current.forEach((marker) => {
+          try {
+            marker.remove();
+          } catch (e) {}
+        });
+        waypointMarkersRef.current = [];
+        // Remove map
+        try {
+          mapRef.current.remove();
+        } catch (e) {
+          // Map might already be removed
+        }
         mapRef.current = null;
       }
     };
@@ -277,32 +318,55 @@ function MapDashboard() {
     if (!map) return;
 
     const registerHandlers = () => {
+      // Check if map still exists
+      if (!mapRef.current || !mapRef.current.getCanvas) {
+        return () => {}; // Return empty cleanup if map is gone
+      }
+      
+      const currentMap = mapRef.current;
       const layers = [
         { id: "safest-route-line", label: "Safest route" },
         { id: "shortest-route-line", label: "Shortest route" },
       ];
       const handlers = layers.map(({ id, label }) => {
         const enter = (e) => {
-          if (!map.getLayer(id)) return;
-          map.getCanvas().style.cursor = "pointer";
-          popupRef.current.setLngLat(e.lngLat).setText(label).addTo(map);
+          if (!currentMap.getLayer(id)) return;
+          const canvas = currentMap.getCanvas();
+          if (canvas) {
+            canvas.style.cursor = "pointer";
+          }
+          popupRef.current.setLngLat(e.lngLat).setText(label).addTo(currentMap);
         };
         const leave = () => {
-          map.getCanvas().style.cursor = "";
+          const canvas = currentMap.getCanvas();
+          if (canvas) {
+            canvas.style.cursor = "";
+          }
           popupRef.current.remove();
         };
-        map.on("mouseenter", id, enter);
-        map.on("mouseleave", id, leave);
+        currentMap.on("mouseenter", id, enter);
+        currentMap.on("mouseleave", id, leave);
         return { id, enter, leave };
       });
 
       return () => {
+        const currentMap = mapRef.current;
+        if (!currentMap || !currentMap.getCanvas) return; // Map has been removed
         handlers.forEach(({ id, enter, leave }) => {
-          if (!map.getLayer(id)) return;
-          map.off("mouseenter", id, enter);
-          map.off("mouseleave", id, leave);
+          try {
+            if (!currentMap.getLayer || !currentMap.getLayer(id)) return;
+            currentMap.off("mouseenter", id, enter);
+            currentMap.off("mouseleave", id, leave);
+          } catch (error) {
+            // Layer might not exist or map is being removed
+            console.warn(`Error cleaning up layer ${id}:`, error);
+          }
         });
-        popupRef.current.remove();
+        try {
+          popupRef.current.remove();
+        } catch (error) {
+          // Popup might already be removed
+        }
       };
     };
 
@@ -313,8 +377,19 @@ function MapDashboard() {
       };
       map.once("styledata", once);
       return () => {
-        map.off("styledata", once);
-        cleanup();
+        const currentMap = mapRef.current;
+        if (currentMap) {
+          try {
+            currentMap.off("styledata", once);
+          } catch (error) {
+            // Map might be removed
+          }
+        }
+        try {
+          cleanup();
+        } catch (error) {
+          // Cleanup might fail if map is removed
+        }
       };
     }
 
