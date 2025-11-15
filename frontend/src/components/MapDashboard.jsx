@@ -132,34 +132,50 @@ function MapDashboard() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const layers = [
-      { id: "safest-route-line", label: "Safest route" },
-      { id: "shortest-route-line", label: "Shortest route" },
-    ];
 
-    const handlers = layers.map(({ id, label }) => {
-      const enter = (e) => {
-        if (!map.getLayer(id)) return;
-        map.getCanvas().style.cursor = "pointer";
-        popupRef.current.setLngLat(e.lngLat).setText(label).addTo(map);
-      };
-      const leave = () => {
-        map.getCanvas().style.cursor = "";
+    const registerHandlers = () => {
+      const layers = [
+        { id: "safest-route-line", label: "Safest route" },
+        { id: "shortest-route-line", label: "Shortest route" },
+      ];
+      const handlers = layers.map(({ id, label }) => {
+        const enter = (e) => {
+          if (!map.getLayer(id)) return;
+          map.getCanvas().style.cursor = "pointer";
+          popupRef.current.setLngLat(e.lngLat).setText(label).addTo(map);
+        };
+        const leave = () => {
+          map.getCanvas().style.cursor = "";
+          popupRef.current.remove();
+        };
+        map.on("mouseenter", id, enter);
+        map.on("mouseleave", id, leave);
+        return { id, enter, leave };
+      });
+
+      return () => {
+        handlers.forEach(({ id, enter, leave }) => {
+          if (!map.getLayer(id)) return;
+          map.off("mouseenter", id, enter);
+          map.off("mouseleave", id, leave);
+        });
         popupRef.current.remove();
       };
-      map.on("mouseenter", id, enter);
-      map.on("mouseleave", id, leave);
-      return { id, enter, leave };
-    });
-
-    return () => {
-      handlers.forEach(({ id, enter, leave }) => {
-        if (!map.getLayer(id)) return;
-        map.off("mouseenter", id, enter);
-        map.off("mouseleave", id, leave);
-      });
-      popupRef.current.remove();
     };
+
+    if (!map.isStyleLoaded()) {
+      let cleanup = () => {};
+      const once = () => {
+        cleanup = registerHandlers();
+      };
+      map.once("styledata", once);
+      return () => {
+        map.off("styledata", once);
+        cleanup();
+      };
+    }
+
+    return registerHandlers();
   }, []);
 
   const clearMarkers = () => {
