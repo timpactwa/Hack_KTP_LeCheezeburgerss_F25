@@ -22,6 +22,7 @@ def safe_route():
         return jsonify({"error": "start and end payloads required"}), 400
 
     risk_polygons = crime_data_service.get_risk_polygons({"start": start, "end": end})
+<<<<<<< HEAD
     
     # Log for debugging
     import logging
@@ -75,6 +76,9 @@ def safe_route():
             logger.error(f"Failed to create MultiPolygon: {e}")
             avoid_polygons_geometry = None
     
+=======
+    avoid_geojson = build_avoid_polygons(risk_polygons)
+>>>>>>> 898efa855e993300bc280a851cf36391a6ec7369
     warnings: list[str] = []
     try:
         shortest = ors_client.build_route(start, end)
@@ -107,6 +111,35 @@ def safe_route():
         "warnings": warnings,
     }
     return jsonify(response)
+
+
+def build_avoid_polygons(features):
+    """Convert risk polygon features into ORS-compatible Polygon/MultiPolygon."""
+
+    if not features:
+        return None
+
+    polygons = []
+    for feature in features:
+        geometry = feature.get("geometry") or {}
+        gtype = geometry.get("type")
+        coords = geometry.get("coordinates")
+        if not coords:
+            continue
+        if gtype == "Polygon":
+            if len(coords[0]) >= 4:
+                polygons.append(coords)
+        elif gtype == "MultiPolygon":
+            for poly in coords:
+                if poly and len(poly[0]) >= 4:
+                    polygons.append(poly)
+
+    if not polygons:
+        return None
+
+    if len(polygons) == 1:
+        return {"type": "Polygon", "coordinates": polygons[0]}
+    return {"type": "MultiPolygon", "coordinates": polygons}
 
 
 @bp.get("/crime-heatmap")

@@ -27,7 +27,7 @@ def send_panic_alert(phone_numbers: list[str], lat: float | None, lng: float | N
     map_link = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}" if lat and lng else "Location unavailable"
     body = f"SafeRoute alert at {datetime.utcnow().isoformat()} UTC. View: {map_link}"
 
-    if not (sid and token and from_number and Client):
+    if not (sid and token and from_number and Client) or "replace-with" in (sid or ""):
         LOGGER.info("Simulated SMS to %s: %s", phone_numbers, body)
         return {"status": "simulated", "message": body}
 
