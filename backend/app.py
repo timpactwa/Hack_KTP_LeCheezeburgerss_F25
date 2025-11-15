@@ -42,7 +42,7 @@ def create_app() -> Flask:
     CORS(app)
 
     from . import database
-    from .routes import auth, health, panic, routes
+    from .routes import auth, geocoding, health, panic, routes
 
     database.init_db()
     JWTManager(app)
@@ -51,8 +51,7 @@ def create_app() -> Flask:
     app.register_blueprint(auth.bp)
     app.register_blueprint(routes.bp)
     app.register_blueprint(panic.bp)
-
-    from .routes import auth, health, panic, routes
+    app.register_blueprint(geocoding.bp)
 
     @app.get("/")
     def index():  # pragma: no cover - trivial helper

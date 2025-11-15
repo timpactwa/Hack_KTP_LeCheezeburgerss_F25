@@ -8,4 +8,4 @@ frontend/.env
 *.db
 .DS_Store
 data/**/*.DS_Store
-data/raw/*.geojson
+data/raw/*
