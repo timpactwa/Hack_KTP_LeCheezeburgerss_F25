@@ -1,3 +1,31 @@
-// Legend component synchronized with the MapDashboard heatmap layer; it will
-// display the gradient scale from backend crime data, expose toggles to hide
-// the layer, and optionally show aggregated stats about current hotspots.
+import { useDashboard } from "./dashboard-context";
+
+function CrimeHeatmapLegend() {
+  const { heatmapData, heatmapVisible, setHeatmapVisible } = useDashboard();
+
+  const hotspots = heatmapData?.features?.length ?? 0;
+
+  return (
+    <section>
+      <div className="legend-header">
+        <h2>Crime Heatmap</h2>
+        <label>
+          <input
+            checked={heatmapVisible}
+            type="checkbox"
+            onChange={(event) => setHeatmapVisible(event.target.checked)}
+          />
+          Visible
+        </label>
+      </div>
+      <div className={`legend-bar ${heatmapVisible ? "" : "legend-hidden"}`}>
+        <span>low</span>
+        <div className="gradient" />
+        <span>high</span>
+      </div>
+      <p>{hotspots} hotspots in current view.</p>
+    </section>
+  );
+}
+
+export default CrimeHeatmapLegend;

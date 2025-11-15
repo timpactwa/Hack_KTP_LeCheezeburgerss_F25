@@ -1,3 +1,58 @@
-// Presents the login UI, calls api.js -> /login on submit, stores the returned
-// token in AuthContext, then redirects to the MapDashboard so the user can request
-// /safe-route and access the PanicButton.
+import { useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
+
+function LoginPage() {
+  const { login, isSubmitting, user } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("demo@sferoute.app");
+  const [password, setPassword] = useState("password123");
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      await login({ email, password });
+      navigate("/");
+    } catch (err) {
+      setError("Login failed");
+      console.error(err);
+    }
+  };
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <div className="auth-shell">
+      <form className="auth-card" onSubmit={handleSubmit}>
+        <h1>SafeRoute NYC</h1>
+        <p>Sign in to compare safest vs. fastest routes.</p>
+        <label>
+          Email
+          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+        </label>
+        <label>
+          Password
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            required
+          />
+        </label>
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Signing in..." : "Sign in"}
+        </button>
+        {error && <p className="error-text">{error}</p>}
+        <p>
+          Need an account? <Link to="/register">Register</Link>
+        </p>
+      </form>
+    </div>
+  );
+}
+
+export default LoginPage;

@@ -1,3 +1,16 @@
-// Vite config will eventually import @vitejs/plugin-react, reference values from
-// `.env`/`.env.local`, and expose `VITE_MAPBOX_TOKEN` + API base URLs so the
-// React app can call the Flask backend and Mapbox GL JS securely.
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  return {
+    plugins: [react()],
+    define: {
+      __API_BASE_URL__: JSON.stringify(env.VITE_API_BASE_URL || "http://127.0.0.1:5000"),
+    },
+    server: {
+      port: 5173,
+      host: "0.0.0.0",
+    },
+  };
+});

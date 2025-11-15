@@ -1,5 +1,14 @@
-"""Simple health/uptime endpoint consumed by platform monitors.
+"""Simple health/uptime endpoint consumed by platform monitors."""
 
-Cloud hosting (Render, Railway, etc.) and the frontend can hit this route to
-verify the Flask app + database connections are alive before making heavier
-requests."""
+from __future__ import annotations
+
+from flask import Blueprint, jsonify
+
+bp = Blueprint("health", __name__)
+
+
+@bp.get("/health")
+def healthcheck():
+    """Return a static payload confirming the API is running."""
+
+    return jsonify({"status": "ok"})

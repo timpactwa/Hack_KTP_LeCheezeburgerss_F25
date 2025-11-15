@@ -1,3 +1,28 @@
-// Custom hook that will wrap `navigator.geolocation`, cache coords in state,
-// and share them with MapDashboard for centering plus PanicButton/api.js for the
-// panic-alert payload.
+import { useEffect, useRef, useState } from "react";
+
+export function useGeolocation(options = { enableHighAccuracy: true }) {
+  const [coords, setCoords] = useState(null);
+  const [error, setError] = useState(null);
+  const optionsRef = useRef(options);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setError("Geolocation not supported");
+      return undefined;
+    }
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setCoords({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setError(null);
+      },
+      (err) => setError(err.message),
+      optionsRef.current
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  return { coords, error };
+}
