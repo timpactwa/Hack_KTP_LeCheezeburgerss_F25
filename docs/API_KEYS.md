@@ -70,7 +70,7 @@ This document describes all required and optional API keys for SafeRoute NYC.
 - `TWILIO_FROM_NUMBER` - The phone number to send from (e.g., `+1234567890`)
 
 **Format:**
-- SID: Alphanumeric string starting with "AC" (e.g., `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
+- SID: Alphanumeric string starting with "AC" followed by 32 characters (e.g., `AC` followed by 32 hex characters)
 - Auth Token: Alphanumeric string (e.g., `your_auth_token_here`)
 - From Number: E.164 format (e.g., `+15555551234`)
 
