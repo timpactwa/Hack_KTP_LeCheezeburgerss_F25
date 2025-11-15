@@ -23,15 +23,21 @@ def safe_route():
 
     risk_polygons = crime_data_service.get_risk_polygons({"start": start, "end": end})
     avoid_geojson = {"type": "FeatureCollection", "features": risk_polygons} if risk_polygons else None
+    warnings: list[str] = []
     try:
         shortest = ors_client.build_route(start, end)
-        safest = (
-            ors_client.build_route(start, end, avoid_geojson)
-            if avoid_geojson
-            else shortest
-        )
     except RoutingError as exc:
-        return jsonify({"error": str(exc)}), 502
+        warnings.append(str(exc))
+        shortest = ors_client._fallback_route(start, end)
+
+    if avoid_geojson:
+        try:
+            safest = ors_client.build_route(start, end, avoid_geojson)
+        except RoutingError as exc:
+            warnings.append(f"Safest route fallback: {exc}")
+            safest = shortest
+    else:
+        safest = shortest
 
     response = {
         "start": start,
@@ -39,6 +45,7 @@ def safe_route():
         "shortest": summarize_route(shortest, avoided=0),
         "safest": summarize_route(safest, avoided=len(risk_polygons)),
         "risk_polygons": avoid_geojson,
+        "warnings": warnings,
     }
     return jsonify(response)
 
