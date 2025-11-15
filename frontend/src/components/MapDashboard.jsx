@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 import {
   createBaseMap,
@@ -18,8 +18,59 @@ function MapDashboard() {
   const startMarkerRef = useRef(null);
   const endMarkerRef = useRef(null);
   const waypointMarkersRef = useRef([]);
+  const selectionStartMarkerRef = useRef(null);
+  const selectionEndMarkerRef = useRef(null);
   const popupRef = useRef(new mapboxgl.Popup({ closeButton: false, closeOnClick: false }));
-  const { routeData, heatmapData, activeRouteKey, heatmapVisible, mapSelectionTarget, completeMapSelection } = useDashboard();
+  const { routeData, heatmapData, activeRouteKey, heatmapVisible, mapSelectionTarget, completeMapSelection, selectedStartCoords, selectedEndCoords } = useDashboard();
+  
+  // Helper function to update selection markers
+  const updateSelectionMarkers = useCallback((map) => {
+    if (!map) return;
+    
+    try {
+      // Update start selection marker
+      if (selectedStartCoords) {
+        if (selectionStartMarkerRef.current) {
+          selectionStartMarkerRef.current.setLngLat([selectedStartCoords.lng, selectedStartCoords.lat]);
+        } else {
+          const marker = new mapboxgl.Marker({
+            element: createMarkerElement({ color: "#22d3ee", label: "S" }),
+            draggable: false,
+          })
+            .setLngLat([selectedStartCoords.lng, selectedStartCoords.lat])
+            .addTo(map);
+          selectionStartMarkerRef.current = marker;
+        }
+      } else {
+        if (selectionStartMarkerRef.current) {
+          selectionStartMarkerRef.current.remove();
+          selectionStartMarkerRef.current = null;
+        }
+      }
+      
+      // Update end selection marker
+      if (selectedEndCoords) {
+        if (selectionEndMarkerRef.current) {
+          selectionEndMarkerRef.current.setLngLat([selectedEndCoords.lng, selectedEndCoords.lat]);
+        } else {
+          const marker = new mapboxgl.Marker({
+            element: createMarkerElement({ color: "#ef4444", label: "E" }),
+            draggable: false,
+          })
+            .setLngLat([selectedEndCoords.lng, selectedEndCoords.lat])
+            .addTo(map);
+          selectionEndMarkerRef.current = marker;
+        }
+      } else {
+        if (selectionEndMarkerRef.current) {
+          selectionEndMarkerRef.current.remove();
+          selectionEndMarkerRef.current = null;
+        }
+      }
+    } catch (error) {
+      console.error("Error updating selection markers:", error);
+    }
+  }, [selectedStartCoords, selectedEndCoords]);
 
   useEffect(() => {
     // Prevent multiple initializations
@@ -73,33 +124,88 @@ function MapDashboard() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    
+    // Change cursor when in selection mode
+    const canvas = map.getCanvas();
+    if (canvas) {
+      if (mapSelectionTarget) {
+        canvas.style.cursor = "crosshair";
+      } else {
+        canvas.style.cursor = "";
+      }
+    }
+    
     const handleClick = (event) => {
       if (!mapSelectionTarget) return;
       completeMapSelection({ lat: event.lngLat.lat, lng: event.lngLat.lng });
     };
     map.on("click", handleClick);
     return () => {
-      map.off("click", handleClick);
+      if (map) {
+        map.off("click", handleClick);
+        const canvas = map.getCanvas();
+        if (canvas) {
+          canvas.style.cursor = "";
+        }
+      }
     };
   }, [mapSelectionTarget, completeMapSelection]);
+  
+  // Update selection markers when coordinates change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    
+    if (!map.isStyleLoaded()) {
+      // Wait for map to be ready
+      const handleStyleLoad = () => {
+        setTimeout(() => {
+          const currentMap = mapRef.current;
+          if (currentMap && currentMap.isStyleLoaded()) {
+            updateSelectionMarkers(currentMap);
+          }
+        }, 100);
+      };
+      map.once("style.load", handleStyleLoad);
+      return () => {
+        map.off("style.load", handleStyleLoad);
+      };
+    }
+    
+    updateSelectionMarkers(map);
+  }, [selectedStartCoords, selectedEndCoords, updateSelectionMarkers]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !heatmapData) return;
-    if (!map.isStyleLoaded()) {
-      map.once("styledata", () => {
+    if (!map) return;
+    
+    // Wait for map style to be loaded before adding heatmap
+    const addHeatmap = () => {
+      if (!heatmapData || !heatmapData.features || heatmapData.features.length === 0) {
+        console.warn("No heatmap data available");
+        return;
+      }
+      
+      try {
         ensureGeoJSONSource(map, "crime", heatmapData);
         ensureHeatmapLayer(map, "crime");
-      });
+        map.setLayoutProperty(
+          "crime-heatmap",
+          "visibility",
+          heatmapVisible ? "visible" : "none"
+        );
+        console.log(`Heatmap layer added with ${heatmapData.features.length} points`);
+      } catch (error) {
+        console.error("Failed to add heatmap layer:", error);
+      }
+    };
+    
+    if (!map.isStyleLoaded()) {
+      map.once("style.load", addHeatmap);
       return;
     }
-    ensureGeoJSONSource(map, "crime", heatmapData);
-    ensureHeatmapLayer(map, "crime");
-    map.setLayoutProperty(
-      "crime-heatmap",
-      "visibility",
-      heatmapVisible ? "visible" : "none"
-    );
+    
+    addHeatmap();
   }, [heatmapData, heatmapVisible]);
 
   useEffect(() => {
@@ -226,6 +332,7 @@ function MapDashboard() {
     }
     waypointMarkersRef.current.forEach((marker) => marker.remove());
     waypointMarkersRef.current = [];
+    // Note: Don't clear selection markers - they should persist
   };
 
   const addWaypoints = (geometry) => {
@@ -270,20 +377,7 @@ function MapDashboard() {
   }
 
   return (
-    <div className="mapbox-container" ref={mapNodeRef} style={{ width: "100%", height: "100%" }}>
-      {!mapRef.current && (
-        <div style={{ 
-          position: "absolute", 
-          top: "50%", 
-          left: "50%", 
-          transform: "translate(-50%, -50%)",
-          color: "#94a3b8",
-          fontSize: "0.9rem"
-        }}>
-          Loading map...
-        </div>
-      )}
-    </div>
+    <div className="mapbox-container" ref={mapNodeRef} style={{ width: "100%", height: "100%" }} />
   );
 }
 

@@ -28,6 +28,7 @@ function RouteForm() {
     beginMapSelection,
     registerMapSelectionHandler,
     mapSelectionTarget,
+    updateSelectedCoords,
   } = useDashboard();
   const [startCoords, setStartCoords] = useState(DEFAULT_START);
   const [endCoords, setEndCoords] = useState(DEFAULT_END);
@@ -61,10 +62,12 @@ function RouteForm() {
       setStartCoords(coords);
       setStartLabel(label);
       setStartQuery("");
+      updateSelectedCoords("start", coords);
     } else {
       setEndCoords(coords);
       setEndLabel(label);
       setEndQuery("");
+      updateSelectedCoords("end", coords);
     }
     try {
       const feature = await reverseGeocode(coords.lng, coords.lat);

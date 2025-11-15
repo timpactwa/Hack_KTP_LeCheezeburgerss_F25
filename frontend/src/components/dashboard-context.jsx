@@ -20,10 +20,28 @@ export function DashboardProvider({ children }) {
     data: heatmapData,
     isLoading: isHeatmapLoading,
     error: heatmapError,
-  } = useQuery({ queryKey: ["crime-heatmap"], queryFn: fetchCrimeHeatmap });
+  } = useQuery({ 
+    queryKey: ["crime-heatmap"], 
+    queryFn: fetchCrimeHeatmap,
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+  
+  // Log heatmap errors for debugging
+  useEffect(() => {
+    if (heatmapError) {
+      console.error("Failed to load heatmap data:", heatmapError);
+      if (heatmapError.message?.includes("CONNECTION_REFUSED") || heatmapError.code === "ECONNREFUSED") {
+        console.error("⚠️ Backend server is not running. Start it with: py run_backend.py");
+      }
+    }
+  }, [heatmapError]);
   const [heatmapVisible, setHeatmapVisible] = useState(true);
   const [mapSelectionTarget, setMapSelectionTarget] = useState(null);
   const mapSelectionCallbacks = useRef({});
+  const [selectedStartCoords, setSelectedStartCoords] = useState(null);
+  const [selectedEndCoords, setSelectedEndCoords] = useState(null);
 
   const registerMapSelectionHandler = useCallback((field, handler) => {
     mapSelectionCallbacks.current[field] = handler;
@@ -40,11 +58,25 @@ export function DashboardProvider({ children }) {
     (coords) => {
       if (mapSelectionTarget && mapSelectionCallbacks.current[mapSelectionTarget]) {
         mapSelectionCallbacks.current[mapSelectionTarget](coords);
+        // Store coordinates for marker display
+        if (mapSelectionTarget === "start") {
+          setSelectedStartCoords(coords);
+        } else if (mapSelectionTarget === "end") {
+          setSelectedEndCoords(coords);
+        }
       }
       setMapSelectionTarget(null);
     },
     [mapSelectionTarget]
   );
+  
+  const updateSelectedCoords = useCallback((field, coords) => {
+    if (field === "start") {
+      setSelectedStartCoords(coords);
+    } else if (field === "end") {
+      setSelectedEndCoords(coords);
+    }
+  }, []);
 
   useEffect(() => {
     requestRoute(DEFAULT_COORDS).catch((err) => console.error("route init", err));
@@ -78,6 +110,9 @@ export function DashboardProvider({ children }) {
       beginMapSelection,
       registerMapSelectionHandler,
       completeMapSelection,
+      selectedStartCoords,
+      selectedEndCoords,
+      updateSelectedCoords,
     }),
     [
       activeRouteKey,
@@ -95,6 +130,9 @@ export function DashboardProvider({ children }) {
       beginMapSelection,
       registerMapSelectionHandler,
       completeMapSelection,
+      selectedStartCoords,
+      selectedEndCoords,
+      updateSelectedCoords,
     ]
   );
 
