@@ -4,15 +4,44 @@ import "mapbox-gl/dist/mapbox-gl.css";
 const token = import.meta.env.VITE_MAPBOX_TOKEN || "";
 mapboxgl.accessToken = token;
 
+// Debug logging (only in development)
+if (import.meta.env.DEV) {
+  if (!token) {
+    console.warn("⚠️ VITE_MAPBOX_TOKEN is not set in environment variables");
+    console.warn("Create a .env file in the frontend/ directory with: VITE_MAPBOX_TOKEN=your_token_here");
+  } else {
+    console.log("✓ Mapbox token loaded:", token.substring(0, 10) + "...");
+  }
+}
+
 export const DEFAULT_CENTER = [-73.995, 40.72];
 
 export function createBaseMap(container) {
-  return new mapboxgl.Map({
+  if (!mapboxgl.accessToken) {
+    throw new Error("Mapbox access token is required");
+  }
+  
+  const map = new mapboxgl.Map({
     container,
     style: "mapbox://styles/mapbox/dark-v11",
     center: DEFAULT_CENTER,
     zoom: 12.5,
+    antialias: true,
   });
+  
+  // Wait for style to load before considering map ready
+  map.on("style.load", () => {
+    console.log("Map style loaded successfully");
+  });
+  
+  map.on("error", (e) => {
+    console.error("Map error:", e.error?.message || e);
+    if (e.error?.message?.includes("style")) {
+      console.error("Style loading failed. Check your Mapbox token and network connection.");
+    }
+  });
+  
+  return map;
 }
 
 export function ensureGeoJSONSource(map, id, data) {

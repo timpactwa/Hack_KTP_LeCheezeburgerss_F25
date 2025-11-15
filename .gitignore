@@ -9,3 +9,15 @@ frontend/.env
 .DS_Store
 data/**/*.DS_Store
 data/raw/*
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Temporary files
+*.tmp
+temp_*.txt
+*.sh

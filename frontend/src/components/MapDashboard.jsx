@@ -22,16 +22,53 @@ function MapDashboard() {
   const { routeData, heatmapData, activeRouteKey, heatmapVisible, mapSelectionTarget, completeMapSelection } = useDashboard();
 
   useEffect(() => {
-    if (!mapNodeRef.current || mapRef.current) {
+    // Prevent multiple initializations
+    if (mapRef.current) {
       return;
     }
+    
+    if (!mapNodeRef.current) {
+      console.warn("Map container ref is not available yet");
+      return;
+    }
+    
     if (!mapboxgl.accessToken) {
+      console.error("Mapbox access token is missing. Add VITE_MAPBOX_TOKEN to your frontend/.env file");
       return;
     }
-    mapRef.current = createBaseMap(mapNodeRef.current);
-    mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-left");
-    return () => mapRef.current?.remove();
-  }, []);
+    
+    try {
+      console.log("Initializing map with container:", mapNodeRef.current);
+      mapRef.current = createBaseMap(mapNodeRef.current);
+      
+      // Wait for style to load before adding controls
+      mapRef.current.once("style.load", () => {
+        console.log("Map style loaded, adding controls");
+        mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-left");
+      });
+      
+      mapRef.current.on("load", () => {
+        console.log("Map fully loaded and ready");
+      });
+      
+      mapRef.current.on("error", (e) => {
+        console.error("Map error:", e.error?.message || e);
+      });
+      
+      console.log("Map initialization started");
+    } catch (error) {
+      console.error("Failed to initialize map:", error);
+      console.error("Error details:", error.message, error.stack);
+    }
+    
+    return () => {
+      if (mapRef.current) {
+        console.log("Cleaning up map");
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []); // Empty deps - only run once on mount
 
   useEffect(() => {
     const map = mapRef.current;
@@ -217,12 +254,37 @@ function MapDashboard() {
   if (!mapboxgl.accessToken) {
     return (
       <div className="map-empty-state">
-        Add VITE_MAPBOX_TOKEN to your environment to load the NYC basemap.
+        <h2>Mapbox Token Missing</h2>
+        <p>Add <code>VITE_MAPBOX_TOKEN</code> to your <code>frontend/.env</code> file</p>
+        <p style={{ fontSize: "0.9rem", marginTop: "1rem", opacity: 0.8 }}>
+          Get your token from: <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener noreferrer" style={{ color: "#34d399" }}>https://account.mapbox.com/access-tokens/</a>
+        </p>
+        <p style={{ fontSize: "0.85rem", marginTop: "0.5rem", opacity: 0.7 }}>
+          After adding the token, restart the dev server (Ctrl+C then npm run dev)
+        </p>
+        <p style={{ fontSize: "0.8rem", marginTop: "0.5rem", opacity: 0.6 }}>
+          Debug: Token is {mapboxgl.accessToken ? "present" : "missing"}
+        </p>
       </div>
     );
   }
 
-  return <div className="mapbox-container" ref={mapNodeRef} />;
+  return (
+    <div className="mapbox-container" ref={mapNodeRef} style={{ width: "100%", height: "100%" }}>
+      {!mapRef.current && (
+        <div style={{ 
+          position: "absolute", 
+          top: "50%", 
+          left: "50%", 
+          transform: "translate(-50%, -50%)",
+          color: "#94a3b8",
+          fontSize: "0.9rem"
+        }}>
+          Loading map...
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default MapDashboard;

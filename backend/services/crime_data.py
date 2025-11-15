@@ -76,27 +76,59 @@ class CrimeDataService:
             polygons = self._create_polygons_from_points(filtered)
         
         # Filter by bounding box if provided
-        if bbox:
-            polygons = self._filter_polygons_by_bbox(polygons, bbox)
+        if bbox and polygons:
+            filtered_polygons = self._filter_polygons_by_bbox(polygons, bbox)
+            # If filtering removed all polygons, use a subset of all polygons
+            # (this helps when bbox is too small or route is in low-crime area)
+            if not filtered_polygons and len(polygons) > 0:
+                # Return up to 20 polygons closest to the route
+                from shapely.geometry import shape, Point, LineString
+                route_line = LineString([
+                    (bbox["start"]["lng"], bbox["start"]["lat"]),
+                    (bbox["end"]["lng"], bbox["end"]["lat"])
+                ])
+                with_distances = [
+                    (poly, shape(poly["geometry"]).distance(route_line))
+                    for poly in polygons
+                ]
+                with_distances.sort(key=lambda x: x[1])
+                filtered_polygons = [poly for poly, _ in with_distances[:20]]
+            return filtered_polygons
         
         return polygons
     
     def _filter_polygons_by_bbox(self, polygons: List[dict], bbox: dict) -> List[dict]:
-        """Filter polygons that intersect with bounding box."""
-        from shapely.geometry import shape, box
+        """Filter polygons that intersect with or are near the route bounding box."""
+        from shapely.geometry import shape, box, LineString
         
-        min_lat = min(bbox["start"]["lat"], bbox["end"]["lat"]) - 0.01
-        max_lat = max(bbox["start"]["lat"], bbox["end"]["lat"]) + 0.01
-        min_lng = min(bbox["start"]["lng"], bbox["end"]["lng"]) - 0.01
-        max_lng = max(bbox["start"]["lng"], bbox["end"]["lng"]) + 0.01
+        # Create a larger bounding box to catch nearby risk zones
+        # Use 0.02 degrees (~2km) buffer instead of 0.01
+        min_lat = min(bbox["start"]["lat"], bbox["end"]["lat"]) - 0.02
+        max_lat = max(bbox["start"]["lat"], bbox["end"]["lat"]) + 0.02
+        min_lng = min(bbox["start"]["lng"], bbox["end"]["lng"]) - 0.02
+        max_lng = max(bbox["start"]["lng"], bbox["end"]["lng"]) + 0.02
         
         bbox_shape = box(min_lng, min_lat, max_lng, max_lat)
+        
+        # Also create a line between start and end to check proximity
+        route_line = LineString([
+            (bbox["start"]["lng"], bbox["start"]["lat"]),
+            (bbox["end"]["lng"], bbox["end"]["lat"])
+        ])
+        
         filtered = []
         
         for poly_feature in polygons:
-            poly_shape = shape(poly_feature["geometry"])
-            if bbox_shape.intersects(poly_shape):
-                filtered.append(poly_feature)
+            try:
+                poly_shape = shape(poly_feature["geometry"])
+                # Include if polygon intersects bbox OR is within 500m of route line
+                if bbox_shape.intersects(poly_shape):
+                    filtered.append(poly_feature)
+                elif poly_shape.distance(route_line) < 0.005:  # ~500m buffer
+                    filtered.append(poly_feature)
+            except Exception:
+                # Skip invalid geometries
+                continue
         
         return filtered
     

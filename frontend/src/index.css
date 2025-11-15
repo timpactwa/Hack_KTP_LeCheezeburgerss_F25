@@ -55,11 +55,18 @@ h3 {
 
 .map-panel {
   flex: 1;
+  position: relative;
+  min-height: 0; /* Important for flex children */
 }
 
 .mapbox-container {
   width: 100%;
-  height: 100vh;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .route-marker {
@@ -76,12 +83,26 @@ h3 {
 
 .map-empty-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100vh;
   padding: 2rem;
   text-align: center;
   background: #1e293b;
+  color: #f8fafc;
+}
+
+.map-empty-state code {
+  background: rgba(15, 23, 42, 0.8);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+  color: #34d399;
+}
+
+.map-empty-state a {
+  text-decoration: underline;
 }
 
 section {

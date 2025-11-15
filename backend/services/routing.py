@@ -43,7 +43,14 @@ class OpenRouteServiceClient:
             "coordinates": [[start["lng"], start["lat"]], [end["lng"], end["lat"]]],
         }
         if avoid_polygons:
+            # ORS expects avoid_polygons as a MultiPolygon geometry object
             body["options"] = {"avoid_polygons": avoid_polygons}
+            # Log polygon count if it's a MultiPolygon
+            if isinstance(avoid_polygons, dict) and avoid_polygons.get("type") == "MultiPolygon":
+                coord_count = len(avoid_polygons.get("coordinates", []))
+                LOGGER.info(f"Using avoid_polygons MultiPolygon with {coord_count} polygon(s)")
+            else:
+                LOGGER.info(f"Using avoid_polygons geometry: {avoid_polygons.get('type', 'unknown')}")
 
         # ORS API key format - use key directly (no Bearer prefix needed)
         headers = {"Authorization": self.api_key, "Content-Type": "application/json"}
@@ -58,7 +65,11 @@ class OpenRouteServiceClient:
                     self._sleep_with_backoff(attempt)
                     continue
                 if response.status_code >= 400:
-                    raise RoutingError(f"ORS error {response.status_code}: {response.text[:200]}")
+                    error_msg = response.text[:500] if response.text else "No error message"
+                    LOGGER.error(f"ORS API error {response.status_code}: {error_msg}")
+                    if avoid_polygons:
+                        LOGGER.error(f"Request body had avoid_polygons with {len(avoid_polygons.get('features', []))} features")
+                    raise RoutingError(f"ORS error {response.status_code}: {error_msg}")
 
                 data = response.json()
                 features = data.get("features") or []
