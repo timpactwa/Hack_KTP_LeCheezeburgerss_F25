@@ -1,0 +1,3 @@
+/* Base stylesheet where we will size the Mapbox canvas, flex the dashboard
+   layout, and define typography tokens shared by RouteComparisonPanel,
+   MapDashboard, PanicButton, and auth pages. */
