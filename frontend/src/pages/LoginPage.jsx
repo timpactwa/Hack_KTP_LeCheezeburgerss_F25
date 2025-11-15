@@ -1,3 +1,7 @@
+/**
+ * Login screen wired to AuthContext and the Flask /login endpoint.
+ * Successful logins prime localStorage so MapDashboard can call protected APIs.
+ */
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 

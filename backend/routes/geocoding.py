@@ -1,4 +1,8 @@
-"""Blueprint for geocoding endpoints (address search and reverse geocoding)."""
+"""Blueprint for geocoding endpoints (address search and reverse geocoding).
+
+Frontend hooks such as ``useGeocoder`` call these REST routes which in turn
+talk to :mod:`backend.services.geocoding`/Mapbox to provide autocomplete data.
+"""
 
 from __future__ import annotations
 
@@ -84,4 +88,3 @@ def reverse_geocode():
         return jsonify({"error": str(exc)}), 500
     except Exception as exc:
         return jsonify({"error": f"Reverse geocoding failed: {str(exc)}"}), 500
-

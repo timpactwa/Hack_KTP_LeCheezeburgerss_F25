@@ -1,3 +1,7 @@
+/**
+ * Register screen that talks to AuthContext + /register backend endpoint.
+ * Connects onboarding flow to trusted contacts so panic alerts have recipients.
+ */
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 

@@ -1,4 +1,9 @@
-"""Blueprint backing the PanicButton CTA in the React UI."""
+"""Blueprint backing the PanicButton CTA in the React UI.
+
+The PanicButton component posts here; we then fetch trusted contacts from the
+database and call :func:`backend.services.notifications.send_panic_alert` to
+fire Twilio (or log-only) SMS messages.
+"""
 
 from __future__ import annotations
 

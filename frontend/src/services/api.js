@@ -1,3 +1,8 @@
+/**
+ * Axios client + REST helpers connecting the React app to the Flask backend.
+ * Functions here are imported by hooks/pages to call auth, routing, settings,
+ * panic-alert endpoints, or mocked versions when `VITE_USE_MOCK_API` is true.
+ */
 import axios from "axios";
 
 import {

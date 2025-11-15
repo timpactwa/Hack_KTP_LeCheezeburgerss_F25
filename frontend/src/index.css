@@ -586,3 +586,6 @@ button {
     transform: rotate(360deg);
   }
 }
+:root {
+  /* Global styles powering the dashboard + map layout tied to React components. */
+  --color-bg: #0b1221;

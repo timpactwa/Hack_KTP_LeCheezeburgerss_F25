@@ -1,3 +1,6 @@
+/**
+ * Simple reusable loading indicator for async states across the dashboard.
+ */
 function Spinner({ label }) {
   return (
     <div className="spinner" role="status" aria-live="polite">

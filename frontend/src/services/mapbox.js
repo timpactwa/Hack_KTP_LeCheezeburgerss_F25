@@ -1,3 +1,7 @@
+/**
+ * Mapbox helper utilities used by MapDashboard/Route visualization components.
+ * Connects frontend map rendering to the Mapbox GL JS SDK and styles.
+ */
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 

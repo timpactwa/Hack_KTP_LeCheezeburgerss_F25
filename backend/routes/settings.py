@@ -1,4 +1,9 @@
-"""Blueprint for user settings and trusted contacts management."""
+"""Blueprint for user settings and trusted contacts management.
+
+The Settings page in the React app hits these JWT-protected endpoints to store
+trusted contacts that :mod:`backend.routes.panic` later uses when firing SMS
+alerts.
+"""
 
 from __future__ import annotations
 
@@ -134,4 +139,3 @@ def update_user_profile():
         session.refresh(user)
         
         return jsonify(_serialize_user(user)), 200
-

@@ -1,3 +1,8 @@
+/**
+ * Settings dashboard connecting AuthContext to the /settings backend routes.
+ * Handles CRUD for trusted contacts so the panic workflow knows which numbers
+ * to pass along to Twilio.
+ */
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 

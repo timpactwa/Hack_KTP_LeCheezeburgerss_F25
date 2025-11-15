@@ -1,7 +1,9 @@
 """Generate risk polygons from raw NYC crime data.
 
-This script processes raw crime data, filters by time/category,
-clusters points, and generates buffered risk polygons.
+The processed files written by this script live under ``data/processed`` and
+are loaded at runtime by :mod:`backend.services.crime_data` so the routing API
+and Mapbox overlays share the exact same risk dataset. Run it whenever you
+ingest new NYC Open Data exports.
 """
 
 import json

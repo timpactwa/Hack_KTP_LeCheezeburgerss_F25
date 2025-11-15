@@ -1,3 +1,7 @@
+/**
+ * Hook that wraps the browser Geolocation API so the map + panic button know
+ * the user's live coordinates.
+ */
 import { useEffect, useRef, useState } from "react";
 
 export function useGeolocation(options = { enableHighAccuracy: true }) {

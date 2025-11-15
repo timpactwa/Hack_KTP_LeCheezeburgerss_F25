@@ -1,3 +1,7 @@
+/**
+ * Displays stats from /safe-route response and lets the user select a route.
+ * Connects dashboard context data to the UI cards.
+ */
 import Spinner from "./Spinner";
 import { useDashboard } from "./dashboard-context";
 

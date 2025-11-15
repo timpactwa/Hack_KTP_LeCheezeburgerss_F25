@@ -1,3 +1,7 @@
+/**
+ * Panic button UI that pulls location via useGeolocation and posts to /panic-alert.
+ * Connects AuthContext trusted contacts -> backend SMS senders.
+ */
 import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";

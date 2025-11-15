@@ -1,3 +1,7 @@
+/**
+ * Top-level React router + dashboard shell connecting pages, Auth, and map UI.
+ * The side panel renders RouteForm/Comparison + PanicButton that talk to Flask.
+ */
 import { Link, Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 import CrimeHeatmapLegend from "./components/CrimeHeatmapLegend";

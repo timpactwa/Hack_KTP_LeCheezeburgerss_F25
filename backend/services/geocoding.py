@@ -1,4 +1,9 @@
-"""Geocoding service using Mapbox Geocoding API with caching."""
+"""Geocoding service using Mapbox Geocoding API with caching.
+
+``backend.routes.geocoding`` and the React autocomplete hooks call into this
+module to translate addresses to coordinates (and vice versa). Keeping the
+Mapbox plumbing here makes it easy to swap providers while reusing the cache.
+"""
 
 from __future__ import annotations
 
@@ -285,4 +290,3 @@ def get_geocoding_client() -> MapboxGeocodingClient:
     if _geocoding_client is None:
         _geocoding_client = MapboxGeocodingClient()
     return _geocoding_client
-

@@ -40,6 +40,8 @@ def create_app() -> Flask:
     database.init_db()
     JWTManager(app)
 
+    # Wire up every blueprint so the React frontend and any future clients can
+    # hit the REST APIs via a single Flask application object.
     app.register_blueprint(health.bp)
     app.register_blueprint(auth.bp)
     app.register_blueprint(routes.bp)

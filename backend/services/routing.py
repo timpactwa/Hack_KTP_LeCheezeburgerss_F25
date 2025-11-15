@@ -1,4 +1,10 @@
-"""Routing adapter for OpenRouteService (ORS) with graceful fallbacks."""
+"""Routing adapter for OpenRouteService (ORS) with graceful fallbacks.
+
+`backend.routes.routes` and any scripts needing walking directions call into
+this module. It hides authorization, retry semantics, and response shaping so
+the rest of the codebase can think in terms of GeoJSON LineStrings and
+friendly dicts instead of raw HTTP calls.
+"""
 
 from __future__ import annotations
 
@@ -39,6 +45,8 @@ class OpenRouteServiceClient:
         if not self.api_key:
             return self._fallback_route(start, end)
 
+        # ORS expects coordinates as [lng, lat] pairs, matching the GeoJSON
+        # ordering used across our APIs and frontend.
         body: Dict[str, Any] = {
             "coordinates": [[start["lng"], start["lat"]], [end["lng"], end["lat"]]],
         }

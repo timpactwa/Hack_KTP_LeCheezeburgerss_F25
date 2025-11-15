@@ -1,3 +1,7 @@
+/**
+ * AuthContext stores the JWT/user profile and calls login/register APIs.
+ * Downstream components (RouteForm, PanicButton) consume it for identity info.
+ */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { login as loginRequest, register as registerRequest } from "../services/api";

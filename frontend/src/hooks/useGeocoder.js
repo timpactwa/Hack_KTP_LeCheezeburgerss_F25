@@ -1,3 +1,7 @@
+/**
+ * Hook that debounces user text and calls the Mapbox geocoding service helper.
+ * Connects RouteForm inputs to backend-friendly coordinates.
+ */
 import { useEffect, useState } from "react";
 
 import { forwardGeocode } from "../services/mapbox";

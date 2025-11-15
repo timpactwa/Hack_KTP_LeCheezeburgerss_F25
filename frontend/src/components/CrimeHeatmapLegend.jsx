@@ -1,3 +1,7 @@
+/**
+ * Legend/toggle for the Mapbox heatmap layer fed by /crime-heatmap endpoint.
+ * Reads dashboard context so it can show current hotspot counts and visibility.
+ */
 import { useDashboard } from "./dashboard-context";
 
 function CrimeHeatmapLegend() {

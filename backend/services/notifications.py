@@ -1,4 +1,10 @@
-"""Notification adapter that keeps SMS provider logic isolated."""
+"""Notification adapter that keeps SMS provider logic isolated.
+
+This layer is consumed by :mod:`backend.routes.panic` so the API can trigger
+alerts without knowing anything about Twilio. It loads credentials from
+``backend.config`` and either calls the real Twilio REST API or logs a
+simulated message for local development.
+"""
 
 from __future__ import annotations
 
@@ -27,6 +33,8 @@ def send_panic_alert(phone_numbers: list[str], lat: float | None, lng: float | N
     map_link = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}" if lat and lng else "Location unavailable"
     body = f"SafeRoute alert at {datetime.utcnow().isoformat()} UTC. View: {map_link}"
 
+    # When running locally we often skip Twilio credentials, so short-circuit to
+    # a log-only path that mirrors the payload a user would see.
     if not (sid and token and from_number and Client) or "replace-with" in (sid or ""):
         LOGGER.info("Simulated SMS to %s: %s", phone_numbers, body)
         return {"status": "simulated", "message": body}

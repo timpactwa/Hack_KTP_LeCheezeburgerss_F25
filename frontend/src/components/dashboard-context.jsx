@@ -1,3 +1,7 @@
+/**
+ * Context provider that coordinates map state, route requests, and heatmap data.
+ * Lies between UI components and services/api hooks.
+ */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 

@@ -1,4 +1,10 @@
-"""Blueprint powering routing + heatmap APIs for the dashboard."""
+"""Blueprint powering routing + heatmap APIs for the dashboard.
+
+The React map panel calls these endpoints to fetch risk polygons,
+shortest/safest routes, and overlay data. Under the hood we stitch together
+:mod:`backend.services.crime_data` and :mod:`backend.services.routing` so the
+frontend stays unaware of ORS/Mapbox specifics.
+"""
 
 from __future__ import annotations
 

@@ -1,3 +1,7 @@
+/**
+ * Mock payloads mirroring backend responses when VITE_USE_MOCK_API is enabled.
+ * Keeps frontend development moving without running Flask.
+ */
 export const MOCK_ROUTE_RESPONSE = {
   start: { lat: 40.73061, lng: -74.0007 },
   end: { lat: 40.7152, lng: -73.983 },

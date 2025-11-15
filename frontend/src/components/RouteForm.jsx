@@ -1,3 +1,7 @@
+/**
+ * RouteForm orchestrates address search, map clicks, and location usage to
+ * call the /safe-route API via dashboard-context.
+ */
 import { useEffect, useMemo, useState } from "react";
 
 import { useDashboard } from "./dashboard-context";

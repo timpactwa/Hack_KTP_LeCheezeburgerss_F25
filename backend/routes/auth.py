@@ -1,4 +1,8 @@
-"""Blueprint implementing registration + login flows."""
+"""Blueprint implementing registration + login flows.
+
+These endpoints are consumed by the React ``AuthContext`` plus the CLI tests,
+and they lean on :mod:`backend.services.auth` + SQLAlchemy for persistence.
+"""
 
 from __future__ import annotations
 

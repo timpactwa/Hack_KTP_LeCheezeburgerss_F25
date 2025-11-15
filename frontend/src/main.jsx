@@ -1,3 +1,7 @@
+/**
+ * React entry point hooking Router/Auth/Query providers together.
+ * This file connects the SPA to DOM root and global styles.
+ */
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";

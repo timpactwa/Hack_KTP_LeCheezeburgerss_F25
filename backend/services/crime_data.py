@@ -1,4 +1,10 @@
-"""Crime ingestion + transformation routines shared across the stack."""
+"""Crime ingestion + transformation routines shared across the stack.
+
+The :mod:`backend.routes.routes` blueprint queries this service for polygons
+and heatmap data, while :mod:`scripts.generate_risk_polygons` populates the
+processed files we read from disk. Keeping those interactions centralized
+ensures the frontend map and routing endpoints stay in sync.
+"""
 
 from __future__ import annotations
 

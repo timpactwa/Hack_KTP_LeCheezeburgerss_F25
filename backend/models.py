@@ -1,4 +1,9 @@
-"""SQLAlchemy models defining SafeRoute entities."""
+"""SQLAlchemy models defining SafeRoute entities.
+
+These tables back the auth/contacts logic (``backend.routes.auth`` &
+``backend.routes.settings``) and panic-alert auditing. ORM relationships let
+the services fetch trusted contacts alongside users when raising SMS alerts.
+"""
 
 from __future__ import annotations
 

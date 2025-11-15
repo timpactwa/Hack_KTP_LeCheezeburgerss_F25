@@ -1,3 +1,7 @@
+/**
+ * Map container that initializes Mapbox GL and renders routes/polygons returned
+ * by the Flask backend via dashboard-context.
+ */
 import { useEffect, useRef, useCallback } from "react";
 
 import {
