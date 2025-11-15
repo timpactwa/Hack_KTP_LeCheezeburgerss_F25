@@ -1,3 +1,13 @@
+:root {
+  --color-bg: #0b1221;
+  --color-panel: rgba(15, 23, 42, 0.95);
+  --color-border: rgba(148, 163, 184, 0.25);
+  --color-primary: #34d399;
+  --color-secondary: #22d3ee;
+  --color-danger: #ef4444;
+  --color-muted: #94a3b8;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5,7 +15,7 @@
 body {
   margin: 0;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #0f172a;
+  background: var(--color-bg);
   color: #f8fafc;
 }
 
@@ -23,11 +33,24 @@ h3 {
 .side-panel {
   width: 380px;
   padding: 1.5rem;
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--color-panel);
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+  }
+  .side-panel {
+    width: 100%;
+    order: 2;
+  }
+  .map-panel {
+    order: 1;
+  }
 }
 
 .map-panel {
@@ -106,6 +129,11 @@ section {
   margin: 0.1rem 0 0.4rem;
 }
 
+.muted-text {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
 .suggestion-list {
   list-style: none;
   margin: 0;
@@ -161,11 +189,13 @@ button {
   background: rgba(8, 47, 73, 0.6);
   border: 1px solid transparent;
   color: inherit;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .route-card.active {
-  border-color: #34d399;
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.4);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 15px rgba(52, 211, 153, 0.4);
+  transform: translateY(-2px);
 }
 
 .legend-header {
@@ -197,14 +227,34 @@ button {
   gap: 0.5rem;
 }
 
+
 .panic-button {
-  background: #ef4444;
+  background: linear-gradient(135deg, #f43f5e, #ef4444);
   color: #fff;
   font-size: 1.1rem;
+  box-shadow: 0 15px 35px rgba(239, 68, 68, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.panic-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px rgba(239, 68, 68, 0.5);
 }
 
 .panic-button.sending {
   opacity: 0.6;
+}
+
+.panic-confirm {
+  background: rgba(248, 250, 252, 0.05);
+  border: 1px solid rgba(248, 250, 252, 0.15);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.panic-confirm div {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .auth-shell {
@@ -297,4 +347,25 @@ button {
 
 .contact-edit-form input {
   flex: 1;
+}
+
+.spinner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.spinner__circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 3px solid rgba(148, 163, 184, 0.3);
+  border-top-color: var(--color-secondary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

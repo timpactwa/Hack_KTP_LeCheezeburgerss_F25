@@ -10,6 +10,7 @@ import {
   updateTrustedContact,
   deleteTrustedContact,
 } from "../services/api";
+import Spinner from "../components/Spinner";
 
 function SettingsPage() {
   const { user } = useAuth();
@@ -136,7 +137,7 @@ function SettingsPage() {
       <div className="settings-card">
         <h2>Profile</h2>
         {profileLoading ? (
-          <p>Loading profile…</p>
+          <Spinner label="Loading profile" />
         ) : profileError ? (
           <p className="error-text">Unable to load profile.</p>
         ) : (
@@ -163,7 +164,7 @@ function SettingsPage() {
       <div className="settings-card">
         <h2>Trusted contacts</h2>
         {contactsLoading ? (
-          <p>Loading contacts…</p>
+          <Spinner label="Loading contacts" />
         ) : contactsError ? (
           <p className="error-text">Unable to load contacts.</p>
         ) : (
