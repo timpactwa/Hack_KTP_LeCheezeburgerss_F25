@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   });
   const [token, setToken] = useState(() => localStorage.getItem("sr_token"));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastAlertAt, setLastAlertAt] = useState(() => localStorage.getItem("sr_last_alert"));
 
   const login = useCallback(async (credentials) => {
     setIsSubmitting(true);
@@ -37,12 +38,20 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
+    setLastAlertAt(null);
     localStorage.removeItem("sr_token");
     localStorage.removeItem("sr_user");
+    localStorage.removeItem("sr_last_alert");
   }, []);
 
   const updateUser = useCallback((updatedUser) => {
     setUser(updatedUser);
+  }, []);
+
+  const recordAlert = useCallback((timestamp) => {
+    if (!timestamp) return;
+    setLastAlertAt(timestamp);
+    localStorage.setItem("sr_last_alert", timestamp);
   }, []);
 
   useEffect(() => {
@@ -61,6 +70,12 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (lastAlertAt) {
+      localStorage.setItem("sr_last_alert", lastAlertAt);
+    }
+  }, [lastAlertAt]);
+
   const value = useMemo(
     () => ({
       user,
@@ -71,8 +86,10 @@ export function AuthProvider({ children }) {
       updateUser,
       isSubmitting,
       isAuthenticated: Boolean(user),
+      lastAlertAt,
+      recordAlert,
     }),
-    [user, token, login, register, logout, updateUser, isSubmitting]
+    [user, token, login, register, logout, updateUser, isSubmitting, lastAlertAt, recordAlert]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

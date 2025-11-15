@@ -9,7 +9,7 @@ import {
 } from "../services/api";
 
 function SettingsPage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, lastAlertAt } = useAuth();
   const [contacts, setContacts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -147,6 +147,9 @@ function SettingsPage() {
               placeholder="+15555555555"
             />
           </label>
+          <p className="muted-text">
+            Last panic alert: {lastAlertAt ? new Date(lastAlertAt).toLocaleString() : "No alerts yet"}
+          </p>
           <button type="submit" disabled={isUpdatingProfile}>
             {isUpdatingProfile ? "Updating..." : "Update Profile"}
           </button>

@@ -1,23 +1,52 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { sendPanicAlert } from "../services/api";
 
 function PanicButton({ disabled }) {
-  const { user } = useAuth();
+  const { user, recordAlert } = useAuth();
   const { coords, error: geoError } = useGeolocation();
   const [status, setStatus] = useState("idle");
   const [lastTimestamp, setLastTimestamp] = useState(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const timerRef = useRef(null);
+  const [toast, setToast] = useState(null);
 
-  const handleClick = async () => {
-    if (disabled || status === "sending") return;
-    if (!confirmOpen) {
-      setConfirmOpen(true);
-      return;
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  const startCountdown = () => {
+    setStatus("confirming");
+    setCountdown(5);
+    timerRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+          sendAlert();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const cancelCountdown = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-    setConfirmOpen(false);
+    setCountdown(0);
+    setStatus("idle");
+  };
+
+  const sendAlert = async () => {
     setStatus("sending");
     try {
       const response = await sendPanicAlert({
@@ -26,11 +55,22 @@ function PanicButton({ disabled }) {
         userId: user?.id,
       });
       setLastTimestamp(response.timestamp);
+      recordAlert(response.timestamp);
       setStatus("sent");
+      setToast("Alert sent to your trusted contacts");
+      setTimeout(() => setToast(null), 5000);
     } catch (error) {
       console.error("panic error", error);
       setStatus("error");
     }
+  };
+
+  const handleClick = () => {
+    if (disabled || status === "sending") return;
+    if (status === "confirming") {
+      return;
+    }
+    startCountdown();
   };
 
   return (
@@ -43,14 +83,14 @@ function PanicButton({ disabled }) {
       >
         Panic Button
       </button>
-      {confirmOpen && (
+      {status === "confirming" && (
         <div className="panic-confirm">
-          <p>Send alert to your trusted contacts?</p>
+          <p>Alert will send in {countdown}s</p>
           <div>
-            <button type="button" onClick={handleClick} disabled={!coords}>
-              Yes, send alert
+            <button type="button" onClick={sendAlert} disabled={!coords}>
+              Send now
             </button>
-            <button type="button" onClick={() => setConfirmOpen(false)}>
+            <button type="button" onClick={cancelCountdown}>
               Cancel
             </button>
           </div>
@@ -60,6 +100,7 @@ function PanicButton({ disabled }) {
       {status === "error" && <p>Could not send alert. Try again.</p>}
       {!coords && !geoError && <p>Waiting for location permission…</p>}
       {geoError && <p>{geoError}</p>}
+      {toast && <p>{toast}</p>}
     </div>
   );
 }
