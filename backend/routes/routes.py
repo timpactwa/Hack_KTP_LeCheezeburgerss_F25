@@ -22,7 +22,7 @@ def safe_route():
         return jsonify({"error": "start and end payloads required"}), 400
 
     risk_polygons = crime_data_service.get_risk_polygons({"start": start, "end": end})
-    avoid_geojson = {"type": "FeatureCollection", "features": risk_polygons} if risk_polygons else None
+    avoid_geojson = build_avoid_polygons(risk_polygons)
     warnings: list[str] = []
     try:
         shortest = ors_client.build_route(start, end)
@@ -44,10 +44,39 @@ def safe_route():
         "end": end,
         "shortest": summarize_route(shortest, avoided=0),
         "safest": summarize_route(safest, avoided=len(risk_polygons)),
-        "risk_polygons": avoid_geojson,
+        "risk_polygons": {"type": "FeatureCollection", "features": risk_polygons} if risk_polygons else None,
         "warnings": warnings,
     }
     return jsonify(response)
+
+
+def build_avoid_polygons(features):
+    """Convert risk polygon features into ORS-compatible Polygon/MultiPolygon."""
+
+    if not features:
+        return None
+
+    polygons = []
+    for feature in features:
+        geometry = feature.get("geometry") or {}
+        gtype = geometry.get("type")
+        coords = geometry.get("coordinates")
+        if not coords:
+            continue
+        if gtype == "Polygon":
+            if len(coords[0]) >= 4:
+                polygons.append(coords)
+        elif gtype == "MultiPolygon":
+            for poly in coords:
+                if poly and len(poly[0]) >= 4:
+                    polygons.append(poly)
+
+    if not polygons:
+        return None
+
+    if len(polygons) == 1:
+        return {"type": "Polygon", "coordinates": polygons[0]}
+    return {"type": "MultiPolygon", "coordinates": polygons}
 
 
 @bp.get("/crime-heatmap")
